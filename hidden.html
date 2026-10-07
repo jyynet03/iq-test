@@ -32,6 +32,7 @@
   .row { display:flex; gap:8px; margin-top:12px; }
   .row .btn { flex:1; }
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet"><link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div id="app">
@@ -39,9 +40,7 @@
   <h1>🍒 체리 찾아라</h1>
 
   <section id="menu" class="card">
-    <p>화면 가득 빽빽한 🍎 사과 속에 숨어 있는 🍒 <b>체리 10개</b>를 모두 찾아 터치하세요. 사과를 누르면 <b>+3초</b> 벌칙이 붙어요.</p>
     <div class="lv" id="lv"></div>
-    <p class="muted" style="margin-top:14px">내 단계별 최고 기록은 이 기기에만 저장됩니다. 개인정보는 수집하지 않습니다.</p>
   </section>
 
   <section id="play" style="display:none; flex-direction:column; gap:10px">
@@ -94,7 +93,7 @@ function drawMenu() {
     const b = document.createElement("button");
     b.className = "btn";
     const bt = best(k);
-    b.innerHTML = `${LEVELS[k].name}<small>${LEVELS[k].desc}${bt ? " · 내 최고 " + bt.toFixed(1) + "초" : ""}</small>`;
+    b.innerHTML = `${LEVELS[k].name}<small>${bt ? "🏅 " + bt.toFixed(1) + "초" : ""}</small>`;
     b.onclick = () => begin(k);
     $("lv").appendChild(b);
   });

@@ -1,0 +1,74 @@
+/* 게임랜드 공통 3D 테마 — 모든 페이지에서 각 페이지 스타일 뒤에 불러와 덮어씀 */
+:root {
+  --ink:#0a0c10;                 /* 굵은 외곽선 */
+  --p1:#3a3f4b; --p2:#2a2e37;    /* 패널 윗/아랫면 */
+  --go1:#3ee07f; --go2:#12a150; --goE:#0a6b34;   /* 초록 버튼 */
+  --yl1:#ffe45c; --yl2:#f5b400; --ylE:#9a6f00;   /* 노란 버튼 */
+}
+html, body {
+  background:
+    radial-gradient(circle at 50% -10%, rgba(120,140,255,.25), transparent 55%),
+    radial-gradient(circle, rgba(255,255,255,.05) 0 4px, transparent 5px) 0 0/30px 30px,
+    linear-gradient(180deg, #1c2030, #0f1118) fixed !important;
+  font-family:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif !important;
+}
+h1, .hd { font-family:"Black Han Sans","Noto Sans KR",sans-serif !important; font-weight:400 !important; letter-spacing:.5px;
+  text-shadow:0 2px 0 #6d5cff, 0 4px 0 #3b2fb0, 0 7px 10px rgba(0,0,0,.55) !important; }
+
+/* 3D 패널 */
+.card, .panel, .targets, .top, #gl-p li, #room {
+  background:linear-gradient(180deg, var(--p1), var(--p2)) !important;
+  border:3px solid var(--ink) !important; border-radius:14px !important;
+  box-shadow:0 6px 0 var(--ink), 0 12px 18px rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.14), inset 0 -3px 0 rgba(0,0,0,.25) !important;
+}
+.top { padding:8px 12px !important; }
+#room { background:linear-gradient(180deg,#ffe8a8,#f9c97a 58%,#b86b2a 58%,#8a4c1c) !important; }
+
+/* 3D 버튼 공통 */
+.btn, .play, #gl-p .b, .food, .opt, .tab, #gl-btn, .like {
+  position:relative; border:3px solid var(--ink) !important; border-radius:12px !important;
+  font-weight:900 !important; cursor:pointer; transition:transform .07s, box-shadow .07s, filter .15s !important;
+}
+.btn, .play, #gl-p .b:not(.alt) {
+  background:linear-gradient(180deg, var(--go1), var(--go2)) !important; color:#fff !important;
+  text-shadow:0 2px 0 rgba(0,0,0,.35);
+  box-shadow:0 6px 0 var(--goE), 0 10px 14px rgba(0,0,0,.4), inset 0 3px 0 rgba(255,255,255,.45) !important;
+}
+.btn.alt, #gl-p .b.alt {
+  background:linear-gradient(180deg,#f4f6fb,#c9cfdc) !important; color:#1b1f2a !important; text-shadow:none;
+  box-shadow:0 6px 0 #7b8294, 0 10px 14px rgba(0,0,0,.4), inset 0 3px 0 #fff !important;
+}
+#gl-btn {
+  background:linear-gradient(180deg, var(--yl1), var(--yl2)) !important; color:#3b2a00 !important;
+  box-shadow:0 4px 0 var(--ylE), 0 6px 10px rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.6) !important;
+}
+.opt, .food, .tab, .like {
+  background:linear-gradient(180deg,#454b59,#30343e) !important; color:#fff !important;
+  box-shadow:0 5px 0 var(--ink), 0 8px 12px rgba(0,0,0,.35), inset 0 2px 0 rgba(255,255,255,.15) !important;
+}
+.food.sel, .tab.on, .like.on {
+  background:linear-gradient(180deg, var(--yl1), var(--yl2)) !important; color:#3b2a00 !important;
+  box-shadow:0 5px 0 var(--ylE), 0 8px 12px rgba(0,0,0,.35), inset 0 2px 0 rgba(255,255,255,.6) !important;
+}
+.opt.ok { background:linear-gradient(180deg,#3ee07f,#12a150) !important; box-shadow:0 5px 0 #0a6b34 !important; }
+.opt.bad { background:linear-gradient(180deg,#ff6b6b,#d62f2f) !important; box-shadow:0 5px 0 #861b1b !important; }
+@media (hover:hover) { .btn:hover, .opt:hover, .food:hover, .tab:hover, #gl-btn:hover, .like:hover { filter:brightness(1.08); transform:translateY(-2px); } }
+.btn:active, .play:active, #gl-p .b:active, .opt:active, .food:active, .tab:active, #gl-btn:active, .like:active {
+  transform:translateY(5px) !important; box-shadow:0 1px 0 var(--ink), inset 0 2px 0 rgba(255,255,255,.2) !important;
+}
+
+/* 입력칸 */
+input, textarea, #gl-p input {
+  background:#141720 !important; border:3px solid var(--ink) !important; border-radius:10px !important;
+  box-shadow:inset 0 3px 6px rgba(0,0,0,.5) !important; color:#fff !important;
+}
+
+/* 게임 화면 캔버스·오버레이 */
+canvas { border:3px solid var(--ink) !important; box-shadow:0 6px 0 var(--ink), 0 12px 20px rgba(0,0,0,.5) !important; }
+#ov { background:radial-gradient(circle, rgba(20,24,36,.75), rgba(5,6,10,.9)) !important; border-radius:14px !important; }
+#ov .big, .big, .score, .pt { font-family:"Black Han Sans",sans-serif !important; font-weight:400 !important;
+  text-shadow:0 3px 0 rgba(0,0,0,.5) !important; }
+.bar { height:10px !important; border:2px solid var(--ink); border-radius:6px !important; background:#141720 !important; }
+.bar i { background:linear-gradient(180deg,#a99bff,#6d5cff) !important; }
+#gl-p { background:linear-gradient(180deg,#2e333e,#1d2028) !important; border:3px solid var(--ink); border-bottom:0; }
+a.back { font-weight:800; opacity:.75 !important; }

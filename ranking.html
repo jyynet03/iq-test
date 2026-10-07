@@ -24,18 +24,13 @@
   .msg { text-align:center; opacity:.7; padding:20px; }
   details { font-size:13px; opacity:.85; line-height:1.7; }
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet"><link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div id="app">
   <a class="back" href="index.html">← 게임랜드</a>
   <h1>👑 총 랭킹</h1>
-  <p class="sub">게임마다 1등 10점, 2등 9점 … 10등 1점을 받아 모두 더한 점수예요.</p>
   <div class="panel"><ol id="list"><li class="msg">불러오는 중...</li></ol></div>
-  <details class="panel"><summary>점수 계산 방법</summary>
-    각 게임 랭킹의 1~10등에게 10점부터 1점까지 줍니다.<br>
-    점수 계산 대상: IQ 테스트, 체리 찾아라(쉬움·보통·어려움 각각), 경마 레이싱, 블록 탑쌓기, 공 맞추기, 고양이 밥주기<br>
-    같은 점수면 1등을 더 많이 한 사람이 위에 옵니다.
-  </details>
 </div>
 
 <script type="module">
@@ -80,7 +75,7 @@ try {
   rows.slice(0, 50).forEach((r, i) => {
     const li = el("li"), top = el("div", "top");
     top.append(el("span", "n", i < 3 ? ["🥇","🥈","🥉"][i] : String(i + 1)), el("span", "nm", r.nick), el("span", "pt", r.pt + "점"));
-    li.append(top, el("div", "det", r.parts.join(" · ")));
+    li.append(top);
     list.appendChild(li);
   });
 } catch (e) {

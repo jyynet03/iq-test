@@ -32,12 +32,13 @@
   .notice { background:#3a2a1a; border:2px solid #fb923c; border-radius:16px; padding:16px; line-height:1.6; font-size:14px; }
   .hide { display:none !important; }
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet"><link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div id="app">
   <a class="back" href="index.html">← 게임랜드</a>
   <h1>💬 게임 요청 게시판</h1>
-  <p class="sub">만들어줬으면 하는 게임이나 고칠 점을 남겨주세요!<br>마음에 드는 의견엔 👍를 눌러주세요.</p>
+  <p class="sub">만들어줬으면 하는 게임을 남겨주세요</p>
 
   <div id="setup" class="notice hide">🛠 게시판은 준비 중이에요. 곧 열릴 예정입니다!</div>
 
@@ -46,8 +47,7 @@
     <input id="nick" maxlength="12" autocomplete="off" placeholder="예: 고양이집사">
     <label for="text" style="margin-top:12px">요청 내용 (2~200자)</label>
     <textarea id="text" maxlength="200" placeholder="예: 테트리스 만들어주세요!"></textarea>
-    <div class="row"><span>🚫 실명·학번·연락처·주소 등 개인정보는 쓰지 마세요</span><span id="cnt">0 / 200</span></div>
-    <p class="warn">글은 모두에게 공개되며, 등록 후에는 수정·삭제할 수 없어요.</p>
+    <div class="row"><span>개인정보는 쓰지 마세요</span><span id="cnt">0 / 200</span></div>
     <button class="btn" id="send" type="submit">등록하기</button>
   </form>
   <div id="msg"></div>
@@ -108,7 +108,7 @@ if (!firebaseConfig) {
   onSnapshot(query(col, orderBy("ts", "desc"), limit(100)), snap => {
     const list = $("list");
     list.textContent = "";
-    if (snap.empty) { list.innerHTML = '<p class="sub">아직 글이 없어요. 첫 번째 요청을 남겨보세요!</p>'; return; }
+    if (snap.empty) { list.innerHTML = '<p class="sub">만들어줬으면 하는 게임을 남겨주세요</p>'; return; }
     snap.forEach(d => {
       const v = d.data();
       const card = document.createElement("div"); card.className = "card post";

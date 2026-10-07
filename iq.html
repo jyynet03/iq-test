@@ -37,6 +37,7 @@
   .row { display:flex; gap:8px; }
   .row .btn { flex:1; }
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet"><link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div id="app">
@@ -44,8 +45,7 @@
   <section id="intro" class="card">
     <h1>🧠 두뇌 IQ 테스트</h1>
     <p class="center muted" style="margin:6px 0 16px">숫자 · 도형 · 논리 · 언어 문제 30개</p>
-    <p>숫자 규칙 찾기, 도형 그림 추리, 논리 추론, 언어 유추 문제를 풀고 내 두뇌 점수를 확인해 보세요. 문제마다 보기를 고르면 바로 정답이 공개됩니다.</p>
-    <p class="muted" style="margin:14px 0 18px">※ 재미로 만든 오락용 테스트입니다. 실제 IQ 검사와는 무관하며, 결과는 의학적·학문적 의미가 없습니다. 이름이나 연락처 등 개인정보는 수집하지 않습니다.</p>
+    <p class="muted center" style="margin:10px 0 18px">※ 재미용 테스트예요</p>
     <button class="btn" id="start">시작하기</button>
   </section>
 
@@ -63,7 +63,6 @@
     <h1 id="title" style="font-size:22px"></h1>
     <p class="center" id="detail" style="margin:10px 0"></p>
     <p class="center muted" id="stat"></p>
-    <p class="muted center" style="margin:12px 0">※ 오락용 결과입니다. 실제 지능과는 무관해요.</p>
     <div class="row"><button class="btn" id="share">링크 공유</button><button class="btn alt" id="again">다시 하기</button></div>
   </section>
 </div>

@@ -103,7 +103,7 @@ async function init() {
   #gl-t{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:80;background:#222;color:#fff;border-radius:20px;padding:10px 18px;font-size:14px;display:none;font-family:sans-serif;max-width:92%;text-align:center}`;
   document.head.appendChild(st);
 
-  const btn = el("button", { id: "gl-btn" }, "🏆 랭킹·계정");
+  const btn = el("button", { id: "gl-btn" }, "🏆 랭킹");
   const ov = el("div", { id: "gl-ov" }), pn = el("div", { id: "gl-p" }), tt = el("div", { id: "gl-t" });
   ov.appendChild(pn); document.body.append(btn, ov, tt);
   btn.onclick = () => { open = true; msgText = ""; render(); };
@@ -128,7 +128,7 @@ async function init() {
         el("button", { className: "b alt", onclick: async () => { await signOut(auth); me = null; msgText = ""; render(); } }, "로그아웃"));
       pn.appendChild(row);
     } else {
-      pn.appendChild(el("div", { className: "hint" }, "닉네임을 만들고 비밀번호를 걸면 랭킹에 기록돼요. 같은 닉네임은 한 명만 쓸 수 있어요."));
+      pn.appendChild(el("div", { className: "hint" }, "닉네임을 만들면 랭킹에 기록돼요."));
       const ni = el("input", { placeholder: "닉네임 (2~12자)", maxLength: 12, autocomplete: "username" });
       const pi = el("input", { placeholder: "비밀번호 (6자 이상)", type: "password", autocomplete: "current-password" });
       const go = async mode => {
@@ -144,7 +144,7 @@ async function init() {
       const row = el("div", { className: "row" });
       row.append(el("button", { className: "b", onclick: () => go("login") }, "로그인"), el("button", { className: "b alt", onclick: () => go("reg") }, "새 닉네임 만들기"));
       pn.append(ni, pi, row,
-        el("div", { className: "hint" }, "⚠️ 실명·연락처 등 개인정보는 닉네임에 쓰지 마세요. 다른 곳에서 쓰는 비밀번호도 쓰지 마세요. 비밀번호를 잊으면 복구할 수 없어요."));
+        el("div", { className: "hint" }, "실명 금지 · 비밀번호 분실 시 복구 불가"));
     }
     pn.appendChild(el("div", { className: "msg", style: "color:" + (msgOk ? "#4ade80" : "#f87171") }, msgText));
 
