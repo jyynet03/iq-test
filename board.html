@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>게임 요청 게시판</title>
+<style>
+  :root { --bg:#12121a; --card:#1e1e2b; --fg:#fff; --acc:#38bdf8; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; min-height:100%; background:var(--bg); color:var(--fg);
+    font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif; }
+  #app { min-height:100dvh; max-width:560px; margin:0 auto; padding:14px 14px 40px; display:flex; flex-direction:column; gap:12px; }
+  a.back { color:#fff; opacity:.6; text-decoration:none; font-size:14px; }
+  h1 { font-size:24px; text-align:center; margin:4px 0 0; }
+  .sub { text-align:center; opacity:.6; font-size:14px; margin:0; line-height:1.5; }
+  .card { background:var(--card); border-radius:16px; padding:16px; }
+  label { font-size:13px; opacity:.7; display:block; margin-bottom:4px; }
+  input, textarea { width:100%; background:#12121a; color:#fff; border:2px solid #34344a; border-radius:12px; padding:12px; font-size:16px; font-family:inherit; }
+  input:focus, textarea:focus { outline:none; border-color:var(--acc); }
+  textarea { resize:vertical; min-height:90px; }
+  .row { display:flex; justify-content:space-between; align-items:center; margin-top:6px; font-size:12px; opacity:.6; }
+  .warn { font-size:12px; opacity:.6; line-height:1.5; margin:8px 0 12px; }
+  .btn { border:0; border-radius:12px; padding:14px; font-size:16px; font-weight:700; background:var(--acc); color:#06222e; cursor:pointer; width:100%; }
+  .btn:disabled { opacity:.5; }
+  .post { display:flex; flex-direction:column; gap:6px; }
+  .meta { display:flex; justify-content:space-between; font-size:12px; opacity:.6; }
+  .nick { font-weight:700; opacity:1; color:var(--acc); }
+  .text { font-size:16px; line-height:1.6; white-space:pre-wrap; word-break:break-word; }
+  .like { align-self:flex-start; border:2px solid #34344a; background:transparent; color:#fff; border-radius:20px; padding:4px 14px; font-size:14px; cursor:pointer; }
+  .like.on { border-color:var(--acc); background:#0c3342; }
+  #msg { text-align:center; font-size:14px; min-height:20px; }
+  .notice { background:#3a2a1a; border:2px solid #fb923c; border-radius:16px; padding:16px; line-height:1.6; font-size:14px; }
+  .hide { display:none !important; }
+</style>
+</head>
+<body>
+<div id="app">
+  <a class="back" href="index.html">← 게임랜드</a>
+  <h1>💬 게임 요청 게시판</h1>
+  <p class="sub">만들어줬으면 하는 게임이나 고칠 점을 남겨주세요!<br>마음에 드는 의견엔 👍를 눌러주세요.</p>
+
+  <div id="setup" class="notice hide">🛠 게시판은 준비 중이에요. 곧 열릴 예정입니다!</div>
+
+  <form id="form" class="card hide">
+    <label for="nick">닉네임 (최대 12자)</label>
+    <input id="nick" maxlength="12" autocomplete="off" placeholder="예: 고양이집사">
+    <label for="text" style="margin-top:12px">요청 내용 (2~200자)</label>
+    <textarea id="text" maxlength="200" placeholder="예: 테트리스 만들어주세요!"></textarea>
+    <div class="row"><span>🚫 실명·학번·연락처·주소 등 개인정보는 쓰지 마세요</span><span id="cnt">0 / 200</span></div>
+    <p class="warn">글은 모두에게 공개되며, 등록 후에는 수정·삭제할 수 없어요.</p>
+    <button class="btn" id="send" type="submit">등록하기</button>
+  </form>
+  <div id="msg"></div>
+  <div id="list" style="display:flex;flex-direction:column;gap:10px"></div>
+</div>
+
+<script type="module">
+import { firebaseConfig } from "./firebase-config.js";
+const $ = id => document.getElementById(id);
+
+if (!firebaseConfig) {
+  $("setup").classList.remove("hide");
+} else {
+  const V = "10.12.2";
+  const [{ initializeApp }, fs] = await Promise.all([
+    import(`https://www.gstatic.com/firebasejs/${V}/firebase-app.js`),
+    import(`https://www.gstatic.com/firebasejs/${V}/firebase-firestore.js`),
+  ]);
+  const { getFirestore, collection, addDoc, updateDoc, doc, increment, query, orderBy, limit, onSnapshot, serverTimestamp } = fs;
+  const db = getFirestore(initializeApp(firebaseConfig));
+  const col = collection(db, "requests");
+
+  $("form").classList.remove("hide");
+  const say = (t, ok) => { $("msg").textContent = t; $("msg").style.color = ok ? "#4ade80" : "#f87171"; };
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  };
+  $("nick").value = store.get("board_nick") || "";
+  $("text").addEventListener("input", () => { $("cnt").textContent = $("text").value.length + " / 200"; });
+
+  $("form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const nick = $("nick").value.trim(), text = $("text").value.trim();
+    if (!nick) return say("닉네임을 입력해 주세요.", false);
+    if (text.length < 2) return say("내용을 2자 이상 써 주세요.", false);
+    const wait = 30000 - (Date.now() - (parseInt(store.get("board_last")) || 0));
+    if (wait > 0) return say(Math.ceil(wait / 1000) + "초 뒤에 다시 글을 쓸 수 있어요.", false);
+    $("send").disabled = true;
+    try {
+      await addDoc(col, { nick, text, likes: 0, ts: serverTimestamp() });
+      store.set("board_nick", nick); store.set("board_last", Date.now());
+      $("text").value = ""; $("cnt").textContent = "0 / 200";
+      say("등록됐어요! 고마워요 🙌", true);
+    } catch (err) {
+      say("등록에 실패했어요. 잠시 후 다시 시도해 주세요.", false);
+    }
+    $("send").disabled = false;
+  });
+
+  const liked = new Set(JSON.parse(store.get("board_liked") || "[]"));
+  const fmt = t => {
+    if (!t) return "방금";
+    const d = t.toDate(), p = n => String(n).padStart(2, "0");
+    return `${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+
+  onSnapshot(query(col, orderBy("ts", "desc"), limit(100)), snap => {
+    const list = $("list");
+    list.textContent = "";
+    if (snap.empty) { list.innerHTML = '<p class="sub">아직 글이 없어요. 첫 번째 요청을 남겨보세요!</p>'; return; }
+    snap.forEach(d => {
+      const v = d.data();
+      const card = document.createElement("div"); card.className = "card post";
+      const meta = document.createElement("div"); meta.className = "meta";
+      const n = document.createElement("span"); n.className = "nick"; n.textContent = v.nick;
+      const t = document.createElement("span"); t.textContent = fmt(v.ts);
+      meta.append(n, t);
+      const body = document.createElement("div"); body.className = "text"; body.textContent = v.text;
+      const b = document.createElement("button"); b.className = "like" + (liked.has(d.id) ? " on" : "");
+      b.textContent = "👍 " + (v.likes || 0);
+      b.onclick = async () => {
+        if (liked.has(d.id)) return;
+        liked.add(d.id); store.set("board_liked", JSON.stringify([...liked]));
+        try { await updateDoc(doc(db, "requests", d.id), { likes: increment(1) }); } catch (e) { liked.delete(d.id); }
+      };
+      card.append(meta, body, b);
+      list.appendChild(card);
+    });
+  }, () => say("글을 불러오지 못했어요.", false));
+}
+</script>
+</body>
+</html>
