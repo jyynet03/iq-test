@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>사람 탑쌓기</title>
+<style>
+  :root { --bg:#12121a; --fg:#fff; --acc:#f43f5e; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); overflow:hidden; overscroll-behavior:none;
+    font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif; }
+  #app { height:100dvh; max-width:480px; margin:0 auto; padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+  a.back { color:#fff; opacity:.6; text-decoration:none; font-size:14px; }
+  .top { display:flex; justify-content:space-between; font-weight:700; font-size:16px; }
+  #wrap { position:relative; flex:1; min-height:0; }
+  canvas { width:100%; height:100%; display:block; border-radius:16px; touch-action:none; background:linear-gradient(#1e3a8a,#7dd3fc); }
+  #ov { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+    background:rgba(0,0,0,.55); border-radius:16px; text-align:center; padding:20px; }
+  #ov h1 { margin:0; font-size:28px; }
+  #ov p { margin:0; line-height:1.6; opacity:.9; font-size:15px; }
+  #ov .big { font-size:48px; font-weight:800; color:#fde047; }
+  .btn { border:0; border-radius:14px; padding:14px 30px; font-size:18px; font-weight:700; background:var(--acc); color:#fff; cursor:pointer; margin-top:6px; }
+  .hide { display:none !important; }
+</style>
+</head>
+<body>
+<div id="app">
+  <a class="back" href="index.html">← 게임 모음</a>
+  <div class="top"><span id="score">0층</span><span id="best"></span></div>
+  <div id="wrap">
+    <canvas id="c"></canvas>
+    <div id="ov">
+      <h1 id="ovt">🧍 사람 탑쌓기</h1>
+      <div class="big hide" id="ovs"></div>
+      <p id="ovp">좌우로 움직이는 사람 줄을 <b>화면을 터치</b>해서 떨어뜨리세요.<br>아래 줄과 딱 맞게 쌓을수록 높이 올라가요!<br>어긋난 부분은 잘려 나갑니다. (PC: 스페이스바)</p>
+      <button class="btn" id="go">시작</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+const $ = id => document.getElementById(id);
+const PEOPLE = ["🧍","🧑","👩","👨","🧒","👴","👧","🧔"];
+const LH = 38;                       // 한 줄 높이
+let W = 0, H = 0, dpr = 1;
+let state = "ready", layers = [], cur, dir, fall = [], cam = 0, camT = 0, perfect = 0, msg = "", msgT = 0, last = 0;
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+addEventListener("resize", resize);
+
+function getBest() { try { return parseInt(localStorage.getItem("tower_best")) || 0; } catch (e) { return 0; } }
+function setBest(v) { try { localStorage.setItem("tower_best", v); } catch (e) {} }
+
+const pick = () => PEOPLE[Math.floor(Math.random() * PEOPLE.length)];
+const hue = i => (i * 28) % 360;
+
+function mkLayer(x, w, i) { return { x, w, e: pick(), i }; }
+
+function newMover() {
+  const p = layers[layers.length - 1];
+  cur = mkLayer(0, p.w, layers.length);
+  dir = Math.random() < 0.5 ? 1 : -1;
+  if (dir < 0) cur.x = W - cur.w;
+}
+
+function start() {
+  resize();
+  const bw = Math.min(200, W * 0.55);
+  layers = [mkLayer((W - bw) / 2, bw, 0)];
+  fall = []; cam = 0; camT = 0; perfect = 0; msg = ""; state = "play";
+  newMover();
+  $("ov").classList.add("hide");
+  $("score").textContent = "0층";
+  last = performance.now();
+}
+
+function drop() {
+  if (state !== "play") return;
+  const p = layers[layers.length - 1];
+  const left = Math.max(cur.x, p.x), right = Math.min(cur.x + cur.w, p.x + p.w);
+  const ov = right - left;
+  if (ov <= 0) {                                   // 완전히 빗나감
+    fall.push({ x: cur.x, w: cur.w, e: cur.e, i: cur.i, y: curY(), vy: 0 });
+    cur = null; return over();
+  }
+  if (Math.abs(cur.x - p.x) < 6) {                 // 퍼펙트
+    cur.x = p.x; cur.w = p.w; perfect++;
+    msg = perfect >= 3 ? "🔥 PERFECT x" + perfect : "✨ PERFECT"; msgT = 0.8;
+  } else {
+    perfect = 0;
+    const y = curY();
+    if (cur.x < p.x) fall.push({ x: cur.x, w: p.x - cur.x, e: cur.e, i: cur.i, y, vy: 0 });
+    else fall.push({ x: p.x + p.w, w: cur.x + cur.w - (p.x + p.w), e: cur.e, i: cur.i, y, vy: 0 });
+    cur.x = left; cur.w = ov;
+  }
+  layers.push(cur);
+  $("score").textContent = (layers.length - 1) + "층";
+  camT = Math.max(0, (layers.length - 5) * LH);
+  newMover();
+}
+
+const baseY = () => H - 50;
+const layerY = i => baseY() - i * LH + cam;
+const curY = () => layerY(layers.length);
+
+function over() {
+  state = "over";
+  const n = layers.length - 1, b = getBest(), nb = n > b;
+  if (nb) setBest(n);
+  $("ovt").textContent = nb ? "🎉 최고 기록!" : "💥 무너졌다!";
+  $("ovs").textContent = n + "층";
+  $("ovs").classList.remove("hide");
+  $("ovp").textContent = nb ? "새로운 기록이에요!" : "내 최고 기록 " + b + "층";
+  $("go").textContent = "다시 하기";
+  $("ov").classList.remove("hide");
+  $("best").textContent = "최고 " + Math.max(b, n) + "층";
+}
+
+function update(dt) {
+  cam += (camT - cam) * Math.min(1, 6 * dt);
+  for (const f of fall) { f.vy += 1400 * dt; f.y += f.vy * dt; }
+  fall = fall.filter(f => f.y < H + 80);
+  if (msgT > 0) msgT -= dt;
+  if (state !== "play") return;
+  const n = layers.length - 1;
+  const sp = Math.min(560, 170 + n * 9);
+  cur.x += dir * sp * dt;
+  if (cur.x < 0) { cur.x = 0; dir = 1; }
+  if (cur.x + cur.w > W) { cur.x = W - cur.w; dir = -1; }
+}
+
+function drawLayer(L, y) {
+  ctx.fillStyle = `hsl(${hue(L.i)} 70% 55%)`;
+  ctx.beginPath(); ctx.roundRect(L.x, y - LH + 4, L.w, LH - 4, 8); ctx.fill();
+  const k = Math.max(1, Math.round(L.w / 32)), sw = L.w / k;
+  ctx.font = "28px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  for (let j = 0; j < k; j++) ctx.fillText(L.e, L.x + sw * (j + 0.5), y - LH / 2 + 4);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  // 땅
+  ctx.fillStyle = "#166534"; ctx.fillRect(0, baseY() + cam + 0, W, H);
+  for (const L of layers) drawLayer(L, layerY(L.i));
+  for (const f of fall) drawLayer(f, f.y);
+  if (cur) drawLayer(cur, curY());
+  if (msgT > 0) {
+    ctx.globalAlpha = Math.min(1, msgT * 2); ctx.fillStyle = "#fde047"; ctx.font = "bold 26px sans-serif";
+    ctx.textAlign = "center"; ctx.fillText(msg, W / 2, 60); ctx.globalAlpha = 1;
+  }
+}
+
+function loop(t) {
+  const dt = Math.min(0.05, (t - last) / 1000); last = t;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+
+cv.addEventListener("pointerdown", e => { e.preventDefault(); drop(); });
+addEventListener("keydown", e => { if (e.code === "Space") { e.preventDefault(); if (state === "play") drop(); } });
+$("go").onclick = start;
+$("best").textContent = getBest() ? "최고 " + getBest() + "층" : "";
+resize();
+requestAnimationFrame(t => { last = t; loop(t); });
+</script>
+</body>
+</html>

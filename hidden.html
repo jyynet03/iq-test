@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>숨은그림찾기</title>
+<title>딸기 찾아라</title>
 <style>
   :root { --bg:#12121a; --card:#1e1e2b; --fg:#fff; --acc:#f59e0b; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -37,10 +37,10 @@
 <body>
 <div id="app">
   <a class="back" href="index.html">← 게임 모음</a>
-  <h1>🔍 숨은그림찾기</h1>
+  <h1>🍓 딸기 찾아라</h1>
 
   <section id="menu" class="card">
-    <p>같은 색깔의 비슷한 이모지들 사이에 숨은 목표 그림(예: 딸기)을 개수만큼 모두 찾아 터치하세요. 엉뚱한 곳을 누르면 <b>+3초</b> 벌칙이 붙어요.</p>
+    <p>화면 가득 빽빽한 🍎 사과 속에 숨어 있는 🍓 <b>딸기 10개</b>를 모두 찾아 터치하세요. 사과를 누르면 <b>+3초</b> 벌칙이 붙어요.</p>
     <div class="lv" id="lv"></div>
     <p class="muted" style="margin-top:14px">내 단계별 최고 기록은 이 기기에만 저장됩니다. 개인정보는 수집하지 않습니다.</p>
   </section>
@@ -60,20 +60,13 @@
 </div>
 
 <script>
+const TARGET = "🍓", DECOY = "🍎", COUNT = 10;   // 사과 속에서 딸기 10개 찾기
+// density: 화면을 사과가 덮는 정도 (클수록 겹쳐서 배경이 안 보임)
 const LEVELS = {
-  easy:   { name:"쉬움",   targets:6,  decoys:60,  size:34, desc:"6개 찾기 · 큰 그림" },
-  normal: { name:"보통",   targets:8,  decoys:120, size:28, desc:"8개 찾기 · 빽빽한 장면" },
-  hard:   { name:"어려움", targets:10, decoys:200, size:22, desc:"10개 찾기 · 아주 작고 빽빽함" },
+  easy:   { name:"쉬움",   size:34, density:2.0, desc:"큼직한 사과가 빽빽함" },
+  normal: { name:"보통",   size:28, density:2.8, desc:"사과가 겹겹이 빽빽함" },
+  hard:   { name:"어려움", size:22, density:3.8, desc:"작은 사과가 바닥이 안 보이게 가득" },
 };
-// 같은 색 계열 이모지 사이에서 target 하나만 찾는다
-const THEMES = [
-  { color:"빨간", target:"🍓", name:"딸기",   decoys:["🍎","🍒","🍅","🌶️","🌹","❤️","🍉","🦞","🚗","🧧","🎈","🍄"] },
-  { color:"노란", target:"🍌", name:"바나나", decoys:["🍋","🌽","🌻","⭐","🐥","🧀","🍯","🌕","🐝","🍍","🧽","🔆"] },
-  { color:"초록", target:"🥝", name:"키위",   decoys:["🥒","🥬","🥦","🐸","🍏","🌿","🐢","🌵","🍀","🦖","🫑","🐊"] },
-  { color:"주황", target:"🍊", name:"귤",     decoys:["🥕","🎃","🦊","🍑","🏀","🍁","🧡","🐯","🥭","🦁","🔶","🏵️"] },
-  { color:"보라", target:"🍇", name:"포도",   decoys:["🍆","🔮","☂️","👾","🦄","💜","🟣","🪻","😈","🍬","🧿","🫐"] },
-  { color:"파란", target:"🫐", name:"블루베리", decoys:["🐳","🧢","💙","🦋","🔵","🌀","🧿","🐬","🪣","🌊","🥶","🧊"] },
-];
 
 const $ = id => document.getElementById(id);
 let level = "easy", found = 0, total = 0, start = 0, tick = null, penalty = 0, over = false;
@@ -104,22 +97,23 @@ function show(id) {
 
 function begin(lv) {
   level = lv; const L = LEVELS[lv];
-  found = 0; penalty = 0; over = false; total = L.targets;
+  found = 0; penalty = 0; over = false; total = COUNT;
   $("pen").textContent = "";
   $("lvname").textContent = L.name;
   show("play");
 
-  const th = THEMES[Math.floor(Math.random() * THEMES.length)];
-  const items = [];
-  for (let i = 0; i < L.targets; i++) items.push({ e:th.target, t:true });
-  for (let i = 0; i < L.decoys; i++) items.push({ e: th.decoys[Math.floor(Math.random()*th.decoys.length)], t:false });
-  shuffle(items);
-
-  $("targets").innerHTML = `<span class="t">${th.target}</span><span>${th.color} 이모지 속 <b>${th.name}</b> <b id="left">${L.targets}</b>개를 찾아라!</span>`;
-
   const field = $("field");
   field.innerHTML = "";
   const W = field.clientWidth, H = field.clientHeight;
+  const decoys = Math.round(W * H / (L.size * L.size) * L.density);
+  // 사과를 먼저 깔고 딸기를 마지막에 얹는다 (딸기는 겹쳐도 완전히 가려지지 않음)
+  const items = [];
+  for (let i = 0; i < decoys; i++) items.push({ e:DECOY, t:false });
+  shuffle(items);
+  for (let i = 0; i < COUNT; i++) items.splice(Math.floor(Math.random() * items.length * 0.4) + Math.floor(items.length * 0.6), 0, { e:TARGET, t:true });
+
+  $("targets").innerHTML = `<span class="t">${TARGET}</span><span>사과 속 <b>딸기</b> <b id="left">${COUNT}</b>개를 찾아라!</span>`;
+
   const n = items.length;
   const cols = Math.ceil(Math.sqrt(n * W / H)), rows = Math.ceil(n / cols);
   const cw = W / cols, ch = H / rows;
@@ -134,6 +128,7 @@ function begin(lv) {
     s.style.fontSize = (L.size * (0.85 + Math.random() * 0.3)) + "px";
     s.style.transform = `translate(-50%,-50%) rotate(${Math.round(Math.random()*60-30)}deg)`;
     if (it.t) s.dataset.t = it.e;
+    s.style.zIndex = it.t ? 2 : 1;
     field.appendChild(s);
   });
 
