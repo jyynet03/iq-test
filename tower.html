@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>사람 탑쌓기</title>
+<title>블록 탑쌓기</title>
 <style>
   :root { --bg:#12121a; --fg:#fff; --acc:#f43f5e; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -30,9 +30,9 @@
   <div id="wrap">
     <canvas id="c"></canvas>
     <div id="ov">
-      <h1 id="ovt">🧍 사람 탑쌓기</h1>
+      <h1 id="ovt">🧱 블록 탑쌓기</h1>
       <div class="big hide" id="ovs"></div>
-      <p id="ovp">좌우로 움직이는 사람 줄을 <b>화면을 터치</b>해서 떨어뜨리세요.<br>아래 줄과 딱 맞게 쌓을수록 높이 올라가요!<br>어긋난 부분은 잘려 나갑니다. (PC: 스페이스바)</p>
+      <p id="ovp">좌우로 움직이는 블록을 <b>화면을 터치</b>해서 떨어뜨리세요.<br>아래 줄과 딱 맞게 쌓을수록 높이 올라가요!<br>어긋난 부분은 잘려 나갑니다. (PC: 스페이스바)</p>
       <button class="btn" id="go">시작</button>
     </div>
   </div>
@@ -41,7 +41,6 @@
 <script>
 const cv = document.getElementById("c"), ctx = cv.getContext("2d");
 const $ = id => document.getElementById(id);
-const PEOPLE = ["🧍","🧑","👩","👨","🧒","👴","👧","🧔"];
 const LH = 38;                       // 한 줄 높이
 let W = 0, H = 0, dpr = 1;
 let state = "ready", layers = [], cur, dir, fall = [], cam = 0, camT = 0, perfect = 0, msg = "", msgT = 0, last = 0;
@@ -57,10 +56,9 @@ addEventListener("resize", resize);
 function getBest() { try { return parseInt(localStorage.getItem("tower_best")) || 0; } catch (e) { return 0; } }
 function setBest(v) { try { localStorage.setItem("tower_best", v); } catch (e) {} }
 
-const pick = () => PEOPLE[Math.floor(Math.random() * PEOPLE.length)];
 const hue = i => (i * 28) % 360;
 
-function mkLayer(x, w, i) { return { x, w, e: pick(), i }; }
+function mkLayer(x, w, i) { return { x, w, i }; }
 
 function newMover() {
   const p = layers[layers.length - 1];
@@ -86,7 +84,7 @@ function drop() {
   const left = Math.max(cur.x, p.x), right = Math.min(cur.x + cur.w, p.x + p.w);
   const ov = right - left;
   if (ov <= 0) {                                   // 완전히 빗나감
-    fall.push({ x: cur.x, w: cur.w, e: cur.e, i: cur.i, y: curY(), vy: 0 });
+    fall.push({ x: cur.x, w: cur.w, i: cur.i, y: curY(), vy: 0 });
     cur = null; return over();
   }
   if (Math.abs(cur.x - p.x) < 6) {                 // 퍼펙트
@@ -95,8 +93,8 @@ function drop() {
   } else {
     perfect = 0;
     const y = curY();
-    if (cur.x < p.x) fall.push({ x: cur.x, w: p.x - cur.x, e: cur.e, i: cur.i, y, vy: 0 });
-    else fall.push({ x: p.x + p.w, w: cur.x + cur.w - (p.x + p.w), e: cur.e, i: cur.i, y, vy: 0 });
+    if (cur.x < p.x) fall.push({ x: cur.x, w: p.x - cur.x, i: cur.i, y, vy: 0 });
+    else fall.push({ x: p.x + p.w, w: cur.x + cur.w - (p.x + p.w), i: cur.i, y, vy: 0 });
     cur.x = left; cur.w = ov;
   }
   layers.push(cur);
@@ -136,11 +134,13 @@ function update(dt) {
 }
 
 function drawLayer(L, y) {
-  ctx.fillStyle = `hsl(${hue(L.i)} 70% 55%)`;
-  ctx.beginPath(); ctx.roundRect(L.x, y - LH + 4, L.w, LH - 4, 8); ctx.fill();
-  const k = Math.max(1, Math.round(L.w / 32)), sw = L.w / k;
-  ctx.font = "28px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  for (let j = 0; j < k; j++) ctx.fillText(L.e, L.x + sw * (j + 0.5), y - LH / 2 + 4);
+  const top = y - LH + 3, h = LH - 3;
+  ctx.fillStyle = `hsl(${hue(L.i)} 70% 50%)`;                       // 블록 본체
+  ctx.beginPath(); ctx.roundRect(L.x, top, L.w, h, 6); ctx.fill();
+  ctx.fillStyle = `hsl(${hue(L.i)} 80% 68%)`;                       // 윗면 하이라이트
+  ctx.beginPath(); ctx.roundRect(L.x + 3, top + 3, Math.max(0, L.w - 6), 8, 4); ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,.25)"; ctx.lineWidth = 2;           // 테두리
+  ctx.beginPath(); ctx.roundRect(L.x, top, L.w, h, 6); ctx.stroke();
 }
 
 function draw() {

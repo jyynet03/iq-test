@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>공 맞추기</title>
+<style>
+  :root { --bg:#12121a; --fg:#fff; --acc:#f59e0b; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); overflow:hidden; overscroll-behavior:none;
+    font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif; }
+  #app { height:100dvh; max-width:480px; margin:0 auto; padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+  a.back { color:#fff; opacity:.6; text-decoration:none; font-size:14px; }
+  .top { display:flex; justify-content:space-between; font-weight:700; font-size:16px; }
+  #wrap { position:relative; flex:1; min-height:0; }
+  canvas { width:100%; height:100%; display:block; border-radius:16px; touch-action:none; background:#0f172a; }
+  #ov { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+    background:rgba(0,0,0,.6); border-radius:16px; text-align:center; padding:20px; }
+  #ov h1 { margin:0; font-size:28px; }
+  #ov p { margin:0; line-height:1.6; opacity:.9; font-size:15px; }
+  #ov .big { font-size:48px; font-weight:800; color:#fde047; }
+  .btn { border:0; border-radius:14px; padding:14px 30px; font-size:18px; font-weight:700; background:var(--acc); color:#12121a; cursor:pointer; margin-top:6px; }
+  .hide { display:none !important; }
+</style>
+</head>
+<body>
+<div id="app">
+  <a class="back" href="index.html">← 게임 모음</a>
+  <div class="top"><span id="score">0점</span><span id="lives">❤️❤️❤️</span><span id="best"></span></div>
+  <div id="wrap">
+    <canvas id="c"></canvas>
+    <div id="ov">
+      <h1 id="ovt">⚽ 공 맞추기</h1>
+      <div class="big hide" id="ovs"></div>
+      <p id="ovp">멀리서 날아오는 공을 <b>터치해서 맞추세요</b>.<br>화면 아래까지 오면 ❤️ 하나가 깎여요.<br>💣 폭탄은 누르면 안 돼요!<br>멀리 있을 때 맞출수록 점수가 높아요.</p>
+      <button class="btn" id="go">시작</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+const $ = id => document.getElementById(id);
+const BALLS = ["⚽","🏀","⚾","🎾","🏐","🏈"];
+let W = 0, H = 0, dpr = 1;
+let state = "ready", balls = [], fx = [], score = 0, lives = 3, spawnT = 0, elapsed = 0, last = 0, floaters = [];
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+addEventListener("resize", resize);
+
+function getBest() { try { return parseInt(localStorage.getItem("ball_best")) || 0; } catch (e) { return 0; } }
+function setBest(v) { try { localStorage.setItem("ball_best", v); } catch (e) {} }
+
+const horizon = () => H * 0.28;
+const endY = () => H - 36;
+
+function start() {
+  resize();
+  balls = []; fx = []; floaters = []; score = 0; lives = 3; spawnT = 0.5; elapsed = 0; state = "play";
+  $("ov").classList.add("hide");
+  hud();
+  last = performance.now();
+}
+
+function hud() {
+  $("score").textContent = score + "점";
+  $("lives").textContent = "❤️".repeat(Math.max(0, lives)) + "🖤".repeat(3 - Math.max(0, lives));
+}
+
+function spawn() {
+  const bomb = score >= 5 && Math.random() < 0.14;
+  const dur = Math.max(0.85, 2.4 - elapsed * 0.03);       // 날아오는 시간 (짧을수록 빠름)
+  balls.push({
+    sx: W * (0.15 + Math.random() * 0.7), ex: W * (0.1 + Math.random() * 0.8),
+    t: 0, dur, bomb, e: bomb ? "💣" : BALLS[Math.floor(Math.random() * BALLS.length)], rot: Math.random() * 6,
+  });
+}
+
+const pos = b => {
+  const k = b.t * b.t * 0.6 + b.t * 0.4;                  // 가까울수록 빨라지는 원근감
+  return { x: b.sx + (b.ex - b.sx) * k, y: horizon() + (endY() - horizon()) * k, r: 12 + 40 * k, k };
+};
+
+function over() {
+  state = "over";
+  const b = getBest(), nb = score > b;
+  if (nb) setBest(score);
+  $("ovt").textContent = nb ? "🎉 최고 기록!" : "게임 오버";
+  $("ovs").textContent = score + "점";
+  $("ovs").classList.remove("hide");
+  $("ovp").textContent = nb ? "새로운 기록이에요!" : "내 최고 기록 " + b + "점";
+  $("go").textContent = "다시 하기";
+  $("ov").classList.remove("hide");
+  $("best").textContent = "최고 " + Math.max(b, score);
+}
+
+function burst(x, y, color) {
+  for (let i = 0; i < 12; i++) {
+    const a = Math.random() * 6.28, s = 80 + Math.random() * 160;
+    fx.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.5, color });
+  }
+}
+
+function lose(x, y) {
+  lives--; hud();
+  burst(x, y, "#ef4444");
+  cv.style.transition = "none"; cv.style.boxShadow = "inset 0 0 0 6px #ef4444";
+  setTimeout(() => { cv.style.boxShadow = ""; }, 150);
+  if (lives <= 0) over();
+}
+
+function update(dt) {
+  for (const f of fx) { f.x += f.vx * dt; f.y += f.vy * dt; f.life -= dt; }
+  fx = fx.filter(f => f.life > 0);
+  for (const f of floaters) { f.y -= 40 * dt; f.life -= dt; }
+  floaters = floaters.filter(f => f.life > 0);
+  if (state !== "play") return;
+  elapsed += dt;
+  spawnT -= dt;
+  if (spawnT <= 0) { spawn(); spawnT = Math.max(0.3, 1.1 - elapsed * 0.014) * (0.6 + Math.random() * 0.8); }
+  for (const b of balls) b.t += dt / b.dur;
+  const out = balls.filter(b => b.t >= 1);
+  balls = balls.filter(b => b.t < 1);
+  for (const b of out) {
+    if (b.bomb) continue;                                  // 폭탄은 놓쳐도 OK
+    const p = pos({ ...b, t: 1 }); lose(p.x, p.y - 20);
+    if (state !== "play") break;
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  // 원근 경기장
+  const hy = horizon();
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#1e293b"); g.addColorStop(1, "#14532d");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#166534"; ctx.beginPath(); ctx.moveTo(W * 0.38, hy); ctx.lineTo(W * 0.62, hy); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,.25)"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(W * 0.38, hy); ctx.lineTo(0, H); ctx.moveTo(W * 0.62, hy); ctx.lineTo(W, H); ctx.stroke();
+  // 바닥선 (여기까지 오면 실점)
+  ctx.strokeStyle = "rgba(239,68,68,.6)"; ctx.setLineDash([8, 8]);
+  ctx.beginPath(); ctx.moveTo(0, endY() + 30); ctx.lineTo(W, endY() + 30); ctx.stroke(); ctx.setLineDash([]);
+
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const list = balls.slice().sort((a, b) => a.t - b.t);   // 먼 것부터 그리기
+  for (const b of list) {
+    const p = pos(b);
+    ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.beginPath(); ctx.ellipse(p.x, p.y + p.r * 0.9, p.r * 0.8, p.r * 0.25, 0, 0, 7); ctx.fill();
+    ctx.font = (p.r * 2) + "px serif";
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(b.rot + b.t * 8); ctx.fillText(b.e, 0, 0); ctx.restore();
+  }
+  for (const f of fx) { ctx.globalAlpha = Math.max(0, f.life * 2); ctx.fillStyle = f.color; ctx.fillRect(f.x - 3, f.y - 3, 6, 6); }
+  ctx.globalAlpha = 1;
+  ctx.font = "bold 22px sans-serif";
+  for (const f of floaters) { ctx.globalAlpha = Math.min(1, f.life * 2); ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y); }
+  ctx.globalAlpha = 1;
+}
+
+function hit(x, y) {
+  if (state !== "play") return;
+  // 터치 지점에 가장 가까운(앞쪽) 공 하나
+  let best = null;
+  for (const b of balls) {
+    const p = pos(b);
+    const d = Math.hypot(p.x - x, p.y - y);
+    if (d <= p.r * 1.35 + 8 && (!best || b.t > best.b.t)) best = { b, p };
+  }
+  if (!best) return;
+  balls.splice(balls.indexOf(best.b), 1);
+  if (best.b.bomb) {
+    burst(best.p.x, best.p.y, "#f59e0b");
+    floaters.push({ x: best.p.x, y: best.p.y, text: "💥 폭탄!", color: "#ef4444", life: 0.8 });
+    lives--; hud(); if (lives <= 0) over();
+    return;
+  }
+  const pts = 1 + Math.round((1 - best.p.k) * 4);          // 멀리서 맞출수록 최대 5점
+  score += pts; hud();
+  burst(best.p.x, best.p.y, "#fde047");
+  floaters.push({ x: best.p.x, y: best.p.y - best.p.r, text: "+" + pts, color: "#fde047", life: 0.7 });
+}
+
+cv.addEventListener("pointerdown", e => {
+  e.preventDefault();
+  const r = cv.getBoundingClientRect();
+  hit(e.clientX - r.left, e.clientY - r.top);
+});
+
+function loop(t) {
+  const dt = Math.min(0.05, (t - last) / 1000); last = t;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+
+$("go").onclick = start;
+$("best").textContent = getBest() ? "최고 " + getBest() : "";
+resize();
+requestAnimationFrame(t => { last = t; loop(t); });
+</script>
+</body>
+</html>
