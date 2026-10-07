@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>숨은그림찾기</title>
+<style>
+  :root { --bg:#12121a; --card:#1e1e2b; --fg:#fff; --acc:#f59e0b; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; min-height:100%; background:var(--bg); color:var(--fg);
+    font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif; }
+  #app { min-height:100dvh; max-width:560px; margin:0 auto; padding:14px 12px; display:flex; flex-direction:column; gap:10px; }
+  a.back { color:#fff; opacity:.6; text-decoration:none; font-size:14px; }
+  h1 { font-size:24px; text-align:center; margin:4px 0; }
+  .card { background:var(--card); border-radius:18px; padding:20px; }
+  .muted { opacity:.6; font-size:13px; line-height:1.6; }
+  .hide { display:none !important; }
+  .btn { border:0; border-radius:14px; padding:15px; font-size:17px; font-weight:700; background:var(--acc); color:#12121a; cursor:pointer; width:100%; }
+  .btn.alt { background:#fff; }
+  .lv { display:flex; flex-direction:column; gap:10px; margin-top:14px; }
+  .lv .btn small { display:block; font-weight:400; font-size:12px; opacity:.75; }
+  .top { display:flex; justify-content:space-between; align-items:center; font-size:15px; font-weight:700; }
+  #pen { color:#ef4444; font-size:13px; min-width:60px; text-align:right; }
+  .targets { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; background:var(--card); border-radius:14px; padding:10px; }
+  .t { font-size:30px; line-height:1; padding:4px 8px; border-radius:10px; background:#2a2a3c; transition:.2s; }
+  .t.done { opacity:.25; filter:grayscale(1); text-decoration:line-through; }
+  #field { position:relative; width:100%; height:62dvh; min-height:360px; background:#f7f2e7; border-radius:16px; overflow:hidden; touch-action:manipulation; }
+  #field span { position:absolute; line-height:1; user-select:none; -webkit-user-select:none; transform:translate(-50%,-50%); }
+  #field span.found { outline:3px solid #22c55e; border-radius:50%; background:rgba(34,197,94,.25); }
+  #field.flash { animation:fl .25s; }
+  @keyframes fl { 50% { box-shadow:inset 0 0 0 6px #ef4444; } }
+  .big { font-size:54px; font-weight:800; text-align:center; color:var(--acc); margin:8px 0; }
+  .row { display:flex; gap:8px; margin-top:12px; }
+  .row .btn { flex:1; }
+</style>
+</head>
+<body>
+<div id="app">
+  <a class="back" href="index.html">← 게임 모음</a>
+  <h1>🔍 숨은그림찾기</h1>
+
+  <section id="menu" class="card">
+    <p>흩어진 이모지 사이에서 위쪽에 표시된 목표물을 모두 찾아 터치하세요. 엉뚱한 곳을 누르면 <b>+3초</b> 벌칙이 붙어요.</p>
+    <div class="lv" id="lv"></div>
+    <p class="muted" style="margin-top:14px">내 단계별 최고 기록은 이 기기에만 저장됩니다. 개인정보는 수집하지 않습니다.</p>
+  </section>
+
+  <section id="play" style="display:none; flex-direction:column; gap:10px">
+    <div class="top"><span id="lvname"></span><span id="time">0.0초</span><span id="pen"></span></div>
+    <div class="targets" id="targets"></div>
+    <div id="field"></div>
+  </section>
+
+  <section id="end" class="card hide">
+    <p class="muted" style="text-align:center" id="endlv"></p>
+    <div class="big" id="endtime"></div>
+    <p style="text-align:center" id="endmsg"></p>
+    <div class="row"><button class="btn" id="again">다시 하기</button><button class="btn alt" id="tomenu">단계 선택</button></div>
+  </section>
+</div>
+
+<script>
+const LEVELS = {
+  easy:   { name:"쉬움",   targets:4, decoys:50,  size:34, desc:"목표 4개 · 큰 그림" },
+  normal: { name:"보통",   targets:5, decoys:110, size:28, desc:"목표 5개 · 빽빽한 장면" },
+  hard:   { name:"어려움", targets:6, decoys:200, size:22, desc:"목표 6개 · 아주 작고 빽빽함" },
+};
+const TARGET_POOL = ["🍓","🎈","🔑","⭐","🎁","🐞","🍄","🎸","🚀","🧸","🍩","🔔"];
+const DECOY_POOL = ["🍎","🍌","🍇","🍉","🍒","🍑","🥝","🍋","🍅","🌽","🥕","🍔","🌸","🌻","🌲","🌵","🐶","🐱","🐭","🐰","🦊","🐻","🐼","🐸","🐝","🦋","🐢","🐙","⚽","🏀","🎲","🎯","🎨","📚","✏️","💡","🔧","🧲","🕐","☂️","👟","🧦","👑","💎","🍕","🌙","☁️","🔥"];
+
+const $ = id => document.getElementById(id);
+let level = "easy", found = 0, total = 0, start = 0, tick = null, penalty = 0, over = false;
+
+const shuffle = a => { for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+
+function best(lv) { try { return parseFloat(localStorage.getItem("hid_best_" + lv)) || null; } catch (e) { return null; } }
+function saveBest(lv, v) { try { localStorage.setItem("hid_best_" + lv, v); } catch (e) {} }
+
+function drawMenu() {
+  $("lv").innerHTML = "";
+  Object.keys(LEVELS).forEach(k => {
+    const b = document.createElement("button");
+    b.className = "btn";
+    const bt = best(k);
+    b.innerHTML = `${LEVELS[k].name}<small>${LEVELS[k].desc}${bt ? " · 내 최고 " + bt.toFixed(1) + "초" : ""}</small>`;
+    b.onclick = () => begin(k);
+    $("lv").appendChild(b);
+  });
+}
+
+function show(id) {
+  $("menu").classList.toggle("hide", id !== "menu");
+  $("end").classList.toggle("hide", id !== "end");
+  $("play").style.display = id === "play" ? "flex" : "none";
+  window.scrollTo(0, 0);
+}
+
+function begin(lv) {
+  level = lv; const L = LEVELS[lv];
+  found = 0; penalty = 0; over = false; total = L.targets;
+  $("pen").textContent = "";
+  $("lvname").textContent = L.name;
+  show("play");
+
+  const targets = shuffle(TARGET_POOL.slice()).slice(0, L.targets);
+  const decoyPool = DECOY_POOL;
+  const items = targets.map(t => ({ e:t, t:true }));
+  for (let i = 0; i < L.decoys; i++) items.push({ e: decoyPool[Math.floor(Math.random()*decoyPool.length)], t:false });
+  shuffle(items);
+
+  $("targets").innerHTML = targets.map(t => `<span class="t" data-e="${t}">${t}</span>`).join("");
+
+  const field = $("field");
+  field.innerHTML = "";
+  const W = field.clientWidth, H = field.clientHeight;
+  const n = items.length;
+  const cols = Math.ceil(Math.sqrt(n * W / H)), rows = Math.ceil(n / cols);
+  const cw = W / cols, ch = H / rows;
+  const cells = shuffle([...Array(cols * rows).keys()]);
+  items.forEach((it, i) => {
+    const c = cells[i];
+    const x = (c % cols + 0.2 + Math.random() * 0.6) * cw;
+    const y = (Math.floor(c / cols) + 0.2 + Math.random() * 0.6) * ch;
+    const s = document.createElement("span");
+    s.textContent = it.e;
+    s.style.left = x + "px"; s.style.top = y + "px";
+    s.style.fontSize = (L.size * (0.85 + Math.random() * 0.3)) + "px";
+    s.style.transform = `translate(-50%,-50%) rotate(${Math.round(Math.random()*60-30)}deg)`;
+    if (it.t) s.dataset.t = it.e;
+    field.appendChild(s);
+  });
+
+  start = Date.now();
+  clearInterval(tick);
+  tick = setInterval(() => { $("time").textContent = elapsed().toFixed(1) + "초"; }, 100);
+}
+
+const elapsed = () => (Date.now() - start) / 1000 + penalty;
+
+$("field").addEventListener("click", e => {
+  if (over) return;
+  const el = e.target.closest("span");
+  if (el && el.dataset.t && !el.classList.contains("found")) {
+    el.classList.add("found");
+    document.querySelectorAll(".t").forEach(t => { if (t.dataset.e === el.dataset.t) t.classList.add("done"); });
+    if (++found === total) finish();
+  } else if (!el || !el.dataset.t) {
+    penalty += 3;
+    $("pen").textContent = "+" + penalty + "초";
+    const f = $("field"); f.classList.remove("flash"); void f.offsetWidth; f.classList.add("flash");
+  }
+});
+
+function finish() {
+  over = true; clearInterval(tick);
+  const t = Math.round(elapsed() * 10) / 10;
+  const prev = best(level);
+  const isBest = !prev || t < prev;
+  if (isBest) saveBest(level, t);
+  $("endlv").textContent = LEVELS[level].name + " 단계 클리어!";
+  $("endtime").textContent = t.toFixed(1) + "초";
+  $("endmsg").textContent = (penalty ? `벌칙 ${penalty}초 포함 · ` : "") + (isBest ? "🎉 내 최고 기록 갱신!" : "내 최고 기록 " + prev.toFixed(1) + "초");
+  show("end");
+}
+
+$("again").onclick = () => begin(level);
+$("tomenu").onclick = () => { drawMenu(); show("menu"); };
+drawMenu();
+</script>
+</body>
+</html>
