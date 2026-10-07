@@ -113,7 +113,14 @@ function begin(lv) {
   $("pen").textContent = "";
   $("lvname").textContent = L.name;
   show("play");
+  // 화면을 먼저 바로 보여주고, 그림은 다음 프레임에 그린다 (누르자마자 화면이 바뀌도록)
+  over = true; clearInterval(tick);
+  $("time").textContent = "0.0초";
+  $("targets").textContent = "🍎 사과를 까는 중...";
+  requestAnimationFrame(() => setTimeout(() => build(L), 0));
+}
 
+function build(L) {
   const field = $("field");
   const W = field.clientWidth, H = field.clientHeight;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -153,6 +160,7 @@ function begin(lv) {
     }
   }
 
+  over = false;
   start = Date.now();
   clearInterval(tick);
   tick = setInterval(() => { $("time").textContent = elapsed().toFixed(1) + "초"; }, 100);
