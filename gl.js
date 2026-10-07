@@ -12,7 +12,7 @@ async function init() {
     import(B + "firebase-app.js"), import(B + "firebase-auth.js"), import(B + "firebase-firestore.js"),
   ]);
   const { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } = A;
-  const { getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs, serverTimestamp } = F;
+  const { getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs, serverTimestamp, increment } = F;
   const app = initializeApp(firebaseConfig), auth = getAuth(app), db = getFirestore(app);
 
   let me = null, pending = null, tab = GAMES[0].key, msgText = "", msgOk = false, open = false;
@@ -176,6 +176,11 @@ async function init() {
   // ---------- 게임에서 호출 ----------
   window.GL = {
     async report(key, value, info) {
+      // 인기순 정렬용 통계: 판 수 +1, 이 기기에서 처음 한 게임이면 사람 수 +1
+      const g = key.split("_")[0];
+      let isNew = 0;
+      try { if (!localStorage.getItem("played_" + g)) { localStorage.setItem("played_" + g, "1"); isNew = 1; } } catch (e) {}
+      setDoc(doc(db, "stats", g), { plays: increment(1), players: increment(isNew) }, { merge: true }).catch(() => {});
       await ready;
       const p = { key, value, info };
       if (me && me.nick) return submit(p);

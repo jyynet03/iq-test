@@ -39,13 +39,13 @@
 <main>
   <h2>인기 게임</h2>
   <div class="grid">
-    <a class="tile" href="iq.html"><div class="cover" data-art="iq"></div><b>IQ 테스트</b><small>퀴즈</small></a>
-    <a class="tile" href="hidden.html"><div class="cover" data-art="cherry"></div><b>체리 찾아라</b><small>찾기</small></a>
-    <a class="tile" href="race.html"><div class="cover" data-art="race"></div><b>경마 레이싱</b><small>레이싱</small></a>
-    <a class="tile" href="tower.html"><div class="cover" data-art="tower"></div><b>블록 탑쌓기</b><small>액션</small></a>
-    <a class="tile" href="ball.html"><div class="cover" data-art="ball"></div><b>공 맞추기</b><small>액션</small></a>
-    <a class="tile" href="cat.html"><div class="cover" data-art="cat"></div><b>고양이 밥주기</b><small>시뮬레이션</small></a>
-    <a class="tile" href="sling.html"><div class="cover" data-art="sling"></div><b>새총 연타</b><small>연타</small></a>
+    <a class="tile" data-g="iq" href="iq.html"><div class="cover" data-art="iq"></div><b>IQ 테스트</b><small>퀴즈</small></a>
+    <a class="tile" data-g="cherry" href="hidden.html"><div class="cover" data-art="cherry"></div><b>체리 찾아라</b><small>찾기</small></a>
+    <a class="tile" data-g="race" href="race.html"><div class="cover" data-art="race"></div><b>경마 레이싱</b><small>레이싱</small></a>
+    <a class="tile" data-g="tower" href="tower.html"><div class="cover" data-art="tower"></div><b>블록 탑쌓기</b><small>액션</small></a>
+    <a class="tile" data-g="ball" href="ball.html"><div class="cover" data-art="ball"></div><b>공 맞추기</b><small>액션</small></a>
+    <a class="tile" data-g="cat" href="cat.html"><div class="cover" data-art="cat"></div><b>고양이 밥주기</b><small>시뮬레이션</small></a>
+    <a class="tile" data-g="sling" href="sling.html"><div class="cover" data-art="sling"></div><b>새총 연타</b><small>연타</small></a>
   </div>
   <div class="wide">
     <a class="tile" href="ranking.html"><div class="cover" data-art="rank"></div><b>총 랭킹</b></a>
@@ -159,6 +159,25 @@ const ART = {
   },
 };
 document.querySelectorAll("[data-art]").forEach(el => { el.innerHTML = ART[el.dataset.art](); });
+</script>
+<script type="module">
+// 인기순 정렬: 해 본 사람 수 → 판 수 순서로 타일을 다시 배치
+import { firebaseConfig } from "./firebase-config.js";
+try {
+  const B = "https://www.gstatic.com/firebasejs/10.12.2/";
+  const [{ initializeApp }, F] = await Promise.all([import(B + "firebase-app.js"), import(B + "firebase-firestore.js")]);
+  const db = F.getFirestore(initializeApp(firebaseConfig));
+  const snap = await F.getDocs(F.collection(db, "stats"));
+  const st = {}; snap.forEach(d => st[d.id] = d.data());
+  const grid = document.querySelector(".grid");
+  const tiles = [...grid.querySelectorAll(".tile[data-g]")];
+  tiles.forEach(t => {
+    const s = st[t.dataset.g] || {}, pl = s.players || 0, n = s.plays || 0;
+    t.dataset.pl = pl; t.dataset.n = n;
+    t.querySelector("small").textContent = `👤 ${pl}명 · ▶ ${n}판`;
+  });
+  tiles.sort((a, b) => b.dataset.pl - a.dataset.pl || b.dataset.n - a.dataset.n).forEach(t => grid.appendChild(t));
+} catch (e) { /* 통계를 못 불러오면 기본 순서 그대로 */ }
 </script>
 </body>
 </html>
