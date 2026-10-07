@@ -1,126 +1,154 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>게임랜드</title>
+<title>GameLand</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
 <style>
-  :root { --bg:#232527; --panel:#393b3d; --line:#0d0d0e; --fg:#fff; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html, body { margin:0; min-height:100%; color:var(--fg); background-color:var(--bg);
-    /* 바닥판의 볼록한 돌기(스터드) 무늬 */
-    background-image:radial-gradient(circle at center, rgba(255,255,255,.07) 0 5px, transparent 6px);
-    background-size:34px 34px;
-    font-family:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",-apple-system,sans-serif; font-weight:800; }
-  #app { min-height:100dvh; max-width:1200px; margin:0 auto; padding:22px 14px 28px; display:flex; flex-direction:column; gap:16px; }
-
-  /* 상단 로고 바 */
-  header { display:flex; align-items:center; justify-content:center; gap:10px; background:var(--panel); border:3px solid var(--line);
-    border-radius:12px; padding:12px 14px; box-shadow:0 5px 0 var(--line), inset 0 3px 0 rgba(255,255,255,.12); }
-  .logo { width:44px; height:44px; flex:none; display:grid; place-items:center; font-size:26px; background:#e2231a; border:3px solid var(--line);
-    border-radius:8px; transform:rotate(-8deg); box-shadow:0 3px 0 #8f130d, inset 0 3px 0 rgba(255,255,255,.35); }
-  h1 { margin:0; font-size:32px; font-weight:900; letter-spacing:1px; text-shadow:3px 3px 0 var(--line); }
-  .sub { margin:0; text-align:center; opacity:.8; font-size:15px; font-weight:700; }
-
-  /* 넓은 화면 6열 → 중간 3열 → 폰 2열 */
+  body { margin:0; }
+  nav { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:10px; padding:12px 18px;
+    background:rgba(23,24,28,.92); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); }
+  .logo { width:30px; height:30px; border-radius:8px; background:var(--acc); transform:rotate(-12deg); box-shadow:0 3px 0 var(--accD); }
+  nav b { font-size:19px; font-weight:900; }
+  nav a.rk { margin-left:auto; text-decoration:none; color:#0f1d3a; background:var(--acc); padding:7px 14px; border-radius:10px;
+    font-weight:800; font-size:14px; box-shadow:0 3px 0 var(--accD); }
+  main { max-width:1200px; margin:0 auto; padding:20px 16px 40px; }
+  h2 { font-size:18px; font-weight:800; margin:6px 2px 14px; }
   .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
   @media (min-width:640px) { .grid { grid-template-columns:repeat(3,1fr); } }
-  @media (min-width:960px) { .grid { grid-template-columns:repeat(6,1fr); gap:12px; }
-    .info b { font-size:15px; } .info em { font-size:11px; } .play { font-size:14px; margin:4px 8px 8px; }
-    .thumb { font-size:50px; } header { max-width:520px; margin:0 auto; width:100%; } }
-  @media (max-width:340px) { .grid { grid-template-columns:1fr; } }
-
-  /* 게임 카드 */
-  .card { --c1:#7c5cff; --c2:#4f46e5; --edge:#2b2196;
-    position:relative; display:flex; flex-direction:column; text-decoration:none; color:#fff; background:var(--panel);
-    border:3px solid var(--line); border-radius:12px; overflow:hidden;
-    box-shadow:0 6px 0 var(--line), inset 0 3px 0 rgba(255,255,255,.12); transition:transform .08s, box-shadow .08s; }
-  .thumb { position:relative; aspect-ratio:1/0.82; display:grid; place-items:center; font-size:58px; border-bottom:3px solid var(--line);
-    background:
-      radial-gradient(circle at center, rgba(255,255,255,.22) 0 4px, transparent 5px) 0 0/22px 22px,
-      linear-gradient(180deg,var(--c1),var(--c2)); }
-  .thumb span { filter:drop-shadow(0 4px 0 rgba(0,0,0,.35)); transform:rotate(-6deg); transition:transform .15s; }
-  .tag { position:absolute; top:6px; left:6px; background:rgba(0,0,0,.55); border-radius:6px; padding:2px 8px; font-size:11px; font-weight:800; }
-  .info { padding:10px 10px 8px; display:flex; flex-direction:column; gap:3px; flex:1; }
-  .info b { font-size:16px; font-weight:900; line-height:1.25; }
-  .info em { font-style:normal; font-size:12px; font-weight:600; opacity:.7; line-height:1.4; }
-  .play { margin:4px 10px 10px; text-align:center; font-size:16px; font-weight:900; padding:9px 0; border-radius:8px; color:#fff;
-    background:#00b06f; border:3px solid var(--line); box-shadow:0 4px 0 #006b43, inset 0 3px 0 rgba(255,255,255,.35); text-shadow:0 2px 0 rgba(0,0,0,.35); }
-  .card.wide { grid-column:1 / -1; flex-direction:row; }
-  .card.wide .thumb { width:38%; aspect-ratio:auto; border-bottom:0; border-right:3px solid var(--line); font-size:46px; }
-  .card.wide .side { flex:1; display:flex; flex-direction:column; }
-
-  @media (hover:hover) { .card:hover { transform:translateY(-3px); box-shadow:0 9px 0 var(--line), inset 0 3px 0 rgba(255,255,255,.12); }
-    .card:hover .thumb span { transform:rotate(4deg) scale(1.12); } }
-  .card:active { transform:translateY(5px); box-shadow:0 1px 0 var(--line), inset 0 3px 0 rgba(255,255,255,.12); }
-  .card:active .play { transform:translateY(2px); box-shadow:0 2px 0 #006b43, inset 0 3px 0 rgba(255,255,255,.35); }
-
-  .iq   { --c1:#a78bfa; --c2:#5b4be0; }
-  .hid  { --c1:#ffb23d; --c2:#ee4b3f; }
-  .race { --c1:#4be07a; --c2:#13a0d6; }
-  .tow  { --c1:#ff6b8a; --c2:#b04ee6; }
-  .bal  { --c1:#ffd23a; --c2:#1fae5c; }
-  .cat  { --c1:#ffa04d; --c2:#f0489c; }
-  .rank { --c1:#fde047; --c2:#f59e0b; }
-  .brd  { --c1:#4cc3ff; --c2:#5d63f0; }
-
-  footer { margin-top:auto; padding-top:6px; text-align:center; opacity:.5; font-size:12px; line-height:1.6; font-weight:600; }
-  @media (prefers-reduced-motion:reduce) { .card, .thumb span { transition:none; } }
+  @media (min-width:960px) { .grid { grid-template-columns:repeat(6,1fr); } }
+  .tile { display:block; text-decoration:none; color:var(--txt); }
+  .cover { aspect-ratio:1; border-radius:14px; overflow:hidden; box-shadow:0 10px 24px rgba(0,0,0,.4);
+    transition:transform .15s, box-shadow .15s; }
+  .cover svg { display:block; width:100%; height:100%; }
+  .tile b { display:block; margin:9px 2px 2px; font-size:15px; font-weight:800; }
+  .tile small { display:block; margin:0 2px; font-size:12px; color:var(--sub); }
+  @media (hover:hover) { .tile:hover .cover { transform:translateY(-4px) scale(1.02); box-shadow:0 16px 30px rgba(0,0,0,.5); } }
+  .tile:active .cover { transform:scale(.97); }
+  .wide { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:26px; }
+  .wide .cover { aspect-ratio:16/7; }
+  footer { margin-top:36px; text-align:center; font-size:12px; color:var(--sub); }
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet"><link rel="stylesheet" href="theme.css">
 </head>
 <body>
-<div id="app">
-  <header><div class="logo">🎮</div><h1>게임랜드</h1></header>
-
+<nav><div class="logo"></div><b>GameLand</b><a class="rk" href="ranking.html">👑 Leaderboard</a></nav>
+<main>
+  <h2>Popular</h2>
   <div class="grid">
-    <a class="card iq" href="iq.html">
-      <div class="thumb"><span>🧠</span></div>
-      <div class="info"><b>IQ 테스트</b></div>
-      <div class="play">▶ 플레이</div>
-    </a>
-    <a class="card hid" href="hidden.html">
-      <div class="thumb"><span>🍒</span></div>
-      <div class="info"><b>체리 찾아라</b></div>
-      <div class="play">▶ 플레이</div>
-    </a>
-    <a class="card race" href="race.html">
-      <div class="thumb"><span>🐎</span></div>
-      <div class="info"><b>경마 레이싱</b></div>
-      <div class="play">▶ 플레이</div>
-    </a>
-    <a class="card tow" href="tower.html">
-      <div class="thumb"><span>🧱</span></div>
-      <div class="info"><b>블록 탑쌓기</b></div>
-      <div class="play">▶ 플레이</div>
-    </a>
-    <a class="card bal" href="ball.html">
-      <div class="thumb"><span>⚽</span></div>
-      <div class="info"><b>공 맞추기</b></div>
-      <div class="play">▶ 플레이</div>
-    </a>
-    <a class="card cat" href="cat.html">
-      <div class="thumb"><span>🐱</span></div>
-      <div class="info"><b>고양이 밥주기</b></div>
-      <div class="play">▶ 플레이</div>
-    </a>
-    <a class="card wide rank" href="ranking.html">
-      <div class="thumb"><span>👑</span></div>
-      <div class="side">
-        <div class="info"><b>총 랭킹</b></div>
-        <div class="play">🏆 순위 보기</div>
-      </div>
-    </a>
-    <a class="card wide brd" href="board.html">
-      <div class="thumb"><span>💬</span></div>
-      <div class="side">
-        <div class="info"><b>게임 요청 게시판</b></div>
-        <div class="play">✏️ 글 남기기</div>
-      </div>
-    </a>
+    <a class="tile" href="iq.html"><div class="cover" data-art="iq"></div><b>IQ Test</b><small>Quiz</small></a>
+    <a class="tile" href="hidden.html"><div class="cover" data-art="cherry"></div><b>Find the Cherry</b><small>Puzzle</small></a>
+    <a class="tile" href="race.html"><div class="cover" data-art="race"></div><b>Horse Race</b><small>Racing</small></a>
+    <a class="tile" href="tower.html"><div class="cover" data-art="tower"></div><b>Block Tower</b><small>Action</small></a>
+    <a class="tile" href="ball.html"><div class="cover" data-art="ball"></div><b>Ball Hit</b><small>Action</small></a>
+    <a class="tile" href="cat.html"><div class="cover" data-art="cat"></div><b>Feed the Cats</b><small>Simulation</small></a>
   </div>
+  <div class="wide">
+    <a class="tile" href="ranking.html"><div class="cover" data-art="rank"></div><b>Leaderboard</b></a>
+    <a class="tile" href="board.html"><div class="cover" data-art="board"></div><b>Game Requests</b></a>
+  </div>
+  <footer>Made for fun · No personal data collected</footer>
+</main>
 
-  <footer>재미로 만든 게임 · 개인정보는 수집하지 않아요</footer>
-</div>
+<script>
+// ---------- 아이소메트릭(입체) 표지 그림 ----------
+const f1 = v => v.toFixed(1);
+const hsl = (h, s, l) => `hsl(${h} ${s}% ${Math.max(0, Math.min(100, l))}%)`;
+const poly = (p, c) => `<polygon points="${p.join(" ")}" fill="${c}"/>`;
+// 아이소 좌표: x는 오른쪽 아래, z는 왼쪽 아래, y는 위
+function box(ox, oy, u, x0, x1, z0, z1, y0, y1, h, s, l) {
+  const p = (x, z, y) => f1(ox + (x - z) * 0.866 * u) + "," + f1(oy + (x + z) * 0.5 * u - y * u);
+  return poly([p(x1, z0, y1), p(x1, z1, y1), p(x1, z1, y0), p(x1, z0, y0)], hsl(h, s, l - 6)) +     // 오른쪽 면
+         poly([p(x0, z1, y1), p(x1, z1, y1), p(x1, z1, y0), p(x0, z1, y0)], hsl(h, s, l - 16)) +    // 왼쪽 면
+         poly([p(x0, z0, y1), p(x1, z0, y1), p(x1, z1, y1), p(x0, z1, y1)], hsl(h, s, l + 10));     // 윗면
+}
+function frame(id, h, inner, w = 160, ht = 160) {
+  return `<svg viewBox="0 0 ${w} ${ht}" xmlns="http://www.w3.org/2000/svg"><defs>
+    <linearGradient id="bg${id}" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="${hsl(h, 55, 86)}"/><stop offset="1" stop-color="${hsl(h, 38, 62)}"/></linearGradient>
+    <radialGradient id="sp${id}" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#fff"/><stop offset=".25" stop-color="${hsl(h, 60, 88)}"/><stop offset="1" stop-color="${hsl(h, 40, 52)}"/></radialGradient>
+    </defs><rect width="${w}" height="${ht}" fill="url(#bg${id})"/>
+    <circle cx="${w * .85}" cy="${ht * .12}" r="${w * .35}" fill="#fff" opacity=".18"/>${inner}</svg>`;
+}
+const shadow = (cx, cy, rx, ry) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="#000" opacity=".14"/>`;
+
+const ART = {
+  tower: () => {
+    const H = 222; let g = shadow(80, 132, 52, 18), off = [0, .6, -.4, .9, .2, -.5];
+    for (let i = 0; i < 6; i++) g += box(80, 112 - i * 13, 13, -2 + off[i], 2 + off[i] * .4, -2 - off[i] * .3, 2, i * 1, i * 1 + 1, H, 45, 74 - i * 3);
+    g += box(80, 30, 13, 2.6, 3.6, -1.2, 1.2, 0, 1, H, 45, 80);                               // 떨어지는 조각
+    return frame("t", H, g);
+  },
+  iq: () => {
+    const H = 252; let g = shadow(80, 128, 56, 18);
+    for (const [x, z, y] of [[0,0,0],[1,0,0],[0,1,0],[1,1,0],[0,0,1],[0,1,1],[1,1,1]])
+      g += box(80, 84, 22, x - 1, x, z - 1, z, y, y + 1, H, 40, 78 - y * 4);
+    g += box(80, 40, 22, 0.15, 1.15, -1.3, -0.3, 1.6, 2.6, H, 50, 84);                          // 튀어나온 한 칸
+    g += `<text x="112" y="58" font-size="34" font-weight="900" fill="#fff" font-family="sans-serif" opacity=".95">?</text>`;
+    return frame("q", H, g);
+  },
+  cherry: () => {
+    const H = 350; let g = "";
+    for (let r = 0; r < 5; r++) for (let c = 0; c < 6; c++) {
+      const x = 14 + c * 27 + (r % 2) * 13, y = 26 + r * 28;
+      g += `<circle cx="${x}" cy="${y}" r="13" fill="${hsl(H, 52, 70 - (r + c) % 3 * 4)}"/><circle cx="${x - 4}" cy="${y - 4}" r="4" fill="#fff" opacity=".35"/>` +
+           `<path d="M${x} ${y - 12} q3 -6 8 -6" stroke="${hsl(140, 30, 45)}" stroke-width="2.5" fill="none" stroke-linecap="round"/>`;
+    }
+    g += `<circle cx="92" cy="86" r="34" fill="#fff" opacity=".35" stroke="#fff" stroke-width="7"/>` +
+         `<line x1="117" y1="111" x2="142" y2="136" stroke="#fff" stroke-width="11" stroke-linecap="round"/>` +
+         `<path d="M86 76 q6 -16 18 -18 M98 78 q2 -12 6 -20" stroke="${hsl(140, 35, 38)}" stroke-width="3" fill="none" stroke-linecap="round"/>` +
+         `<circle cx="84" cy="94" r="10" fill="url(#spc)"/><circle cx="100" cy="96" r="10" fill="url(#spc)"/>`;
+    return frame("c", H, g);
+  },
+  race: () => {
+    const H = 165; let g = `<polygon points="70,58 90,58 160,160 0,160" fill="${hsl(30, 30, 70)}"/>`;
+    for (let i = 0; i < 6; i++) { const t = i / 6, y1 = 58 + 102 * t * t, y2 = 58 + 102 * Math.pow(t + .08, 2), w1 = 1 + 4 * t;
+      g += `<polygon points="${80 - w1},${y1} ${80 + w1},${y1} ${80 + w1 + 1},${y2} ${80 - w1 - 1},${y2}" fill="#fff" opacity=".8"/>`; }
+    g += `<polygon points="0,58 160,58 160,62 0,62" fill="${hsl(H, 30, 55)}" opacity=".5"/>`;
+    g += `<path d="M58 132 a22 22 0 1 1 44 0" stroke="#fff" stroke-width="11" fill="none" stroke-linecap="round"/>` +
+         `<path d="M58 132 a22 22 0 1 1 44 0" stroke="${hsl(H, 40, 45)}" stroke-width="5" fill="none" stroke-dasharray="2 7" stroke-linecap="round"/>`;
+    for (const [x, y] of [[20,40],[132,30],[40,24]]) g += `<line x1="${x}" y1="${y}" x2="${x + 18}" y2="${y}" stroke="#fff" stroke-width="3" opacity=".6" stroke-linecap="round"/>`;
+    return frame("r", H, g);
+  },
+  ball: () => {
+    const H = 25; let g = shadow(98, 140, 40, 10);
+    g += `<circle cx="96" cy="96" r="38" fill="none" stroke="#fff" stroke-width="5" opacity=".7"/><circle cx="96" cy="96" r="22" fill="none" stroke="#fff" stroke-width="5" opacity=".7"/><circle cx="96" cy="96" r="7" fill="#fff" opacity=".8"/>`;
+    for (const [x, y, r] of [[40,52,15],[118,40,10],[70,110,20]]) {
+      g += `<line x1="${x - r * 2.6}" y1="${y - r * .9}" x2="${x - r}" y2="${y - r * .3}" stroke="#fff" stroke-width="${r / 3}" opacity=".5" stroke-linecap="round"/>`;
+      g += `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#spb)"/>`;
+    }
+    return frame("b", H, g);
+  },
+  cat: () => {
+    const H = 42; let g = shadow(80, 140, 50, 12);
+    g += `<polygon points="44,62 52,26 74,52" fill="${hsl(H, 35, 66)}"/><polygon points="116,62 108,26 86,52" fill="${hsl(H, 35, 66)}"/>` +
+         `<polygon points="50,56 54,36 66,52" fill="${hsl(350, 60, 82)}"/><polygon points="110,56 106,36 94,52" fill="${hsl(350, 60, 82)}"/>` +
+         `<ellipse cx="80" cy="92" rx="48" ry="42" fill="${hsl(H, 40, 74)}"/><ellipse cx="80" cy="84" rx="40" ry="30" fill="#fff" opacity=".12"/>` +
+         `<ellipse cx="62" cy="86" rx="6" ry="9" fill="#2b2b33"/><ellipse cx="98" cy="86" rx="6" ry="9" fill="#2b2b33"/>` +
+         `<circle cx="64" cy="83" r="2" fill="#fff"/><circle cx="100" cy="83" r="2" fill="#fff"/>` +
+         `<polygon points="76,100 84,100 80,105" fill="${hsl(350, 55, 70)}"/>` +
+         `<path d="M80 105 q-6 7 -12 3 M80 105 q6 7 12 3" stroke="#2b2b33" stroke-width="2" fill="none" stroke-linecap="round"/>` +
+         `<path d="M128 128 q14 -10 22 0 q-8 10 -22 0 l-8 -6 v12 z" fill="${hsl(205, 50, 72)}"/>`;
+    return frame("k", H, g);
+  },
+  rank: () => {
+    const H = 45; let g = shadow(160, 118, 90, 14);
+    g += box(160, 62, 16, -3, -1, -1, 1, 0, 2.2, H, 45, 72) + box(160, 62, 16, -1, 1, -1, 1, 0, 3.2, H, 50, 78) + box(160, 62, 16, 1, 3, -1, 1, 0, 1.5, H, 40, 68);
+    g += `<polygon points="150,2 156,14 160,4 164,14 170,2 168,20 152,20" fill="#fff" opacity=".9"/>`;
+    return frame("rk", H, g, 320, 140);
+  },
+  board: () => {
+    const H = 215; let g = "";
+    g += `<rect x="70" y="30" width="120" height="56" rx="16" fill="#fff" opacity=".9"/><polygon points="96,84 90,104 116,84" fill="#fff" opacity=".9"/>`;
+    g += `<rect x="150" y="62" width="110" height="50" rx="16" fill="${hsl(H, 45, 70)}"/><polygon points="236,110 246,128 218,110" fill="${hsl(H, 45, 70)}"/>`;
+    for (let i = 0; i < 3; i++) g += `<rect x="86" y="${44 + i * 11}" width="${80 - i * 20}" height="5" rx="2.5" fill="${hsl(H, 30, 60)}"/>`;
+    for (let i = 0; i < 2; i++) g += `<rect x="166" y="${76 + i * 12}" width="${70 - i * 24}" height="5" rx="2.5" fill="#fff" opacity=".8"/>`;
+    return frame("bd", H, g, 320, 140);
+  },
+};
+document.querySelectorAll("[data-art]").forEach(el => { el.innerHTML = ART[el.dataset.art](); });
+</script>
 </body>
 </html>

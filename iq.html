@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>두뇌 IQ 테스트</title>
+<title>IQ Test</title>
 <style>
   :root { --bg:#12121a; --card:#1e1e2b; --fg:#fff; --acc:#7c5cff; --ok:#22c55e; --bad:#ef4444; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -41,12 +41,12 @@
 </head>
 <body>
 <div id="app">
-  <a href="index.html" style="color:#fff;opacity:.6;text-decoration:none;font-size:14px">← 게임랜드</a>
+  <a href="index.html" style="color:#fff;opacity:.6;text-decoration:none;font-size:14px">← GameLand</a>
   <section id="intro" class="card">
-    <h1>🧠 두뇌 IQ 테스트</h1>
-    <p class="center muted" style="margin:6px 0 16px">숫자 · 도형 · 논리 · 언어 문제 30개</p>
-    <p class="muted center" style="margin:10px 0 18px">※ 재미용 테스트예요</p>
-    <button class="btn" id="start">시작하기</button>
+    <h1>🧠 IQ Test</h1>
+    <p class="center muted" style="margin:6px 0 16px">30 questions · Numbers · Shapes · Logic · Words</p>
+    <p class="muted center" style="margin:10px 0 18px">Just for fun</p>
+    <button class="btn" id="start">Start</button>
   </section>
 
   <section id="quiz" class="hide" style="display:contents">
@@ -54,43 +54,43 @@
     <div class="bar"><i id="prog"></i></div>
     <div class="card"><span class="tag" id="cat"></span><div class="q" id="q"></div><div class="fig" id="fig"></div></div>
     <div class="opts" id="opts"></div>
-    <button class="btn alt hide" id="next">다음 ▶</button>
+    <button class="btn alt hide" id="next">Next ▶</button>
   </section>
 
   <section id="end" class="hide card">
-    <p class="center muted">나의 추정 IQ</p>
+    <p class="center muted">Your estimated IQ</p>
     <div class="score" id="iq"></div>
     <h1 id="title" style="font-size:22px"></h1>
     <p class="center" id="detail" style="margin:10px 0"></p>
     <p class="center muted" id="stat"></p>
-    <div class="row"><button class="btn" id="share">링크 공유</button><button class="btn alt" id="again">다시 하기</button></div>
+    <div class="row"><button class="btn" id="share">Share</button><button class="btn alt" id="again">Retry</button></div>
   </section>
 </div>
 
 <script>
 // [분류, 문제, [보기...], 정답 보기 번호(0부터)]
 const QUESTIONS = [
-  ["숫자", "다음 수열의 빈칸은?\n2, 4, 8, 16, ?", ["24","30","32","36"], 2],
-  ["숫자", "다음 수열의 빈칸은?\n1, 1, 2, 3, 5, 8, ?", ["11","12","13","14"], 2],
-  ["숫자", "다음 수열의 빈칸은?\n3, 6, 11, 18, 27, ?", ["36","38","40","45"], 1],
-  ["숫자", "다음 수열의 빈칸은?\n2, 6, 12, 20, 30, ?", ["40","42","44","48"], 1],
-  ["숫자", "다음 수열의 빈칸은?\n1, 4, 9, 16, 25, ?", ["30","34","36","49"], 2],
-  ["숫자", "다음 수열의 빈칸은?\n81, 27, 9, 3, ?", ["0","1","2","6"], 1],
-  ["숫자", "다음 수열의 빈칸은?\n2, 3, 5, 7, 11, 13, ?", ["15","16","17","19"], 2],
-  ["숫자", "다음 수열의 빈칸은?\n1, 2, 6, 24, 120, ?", ["240","600","720","840"], 2],
-  ["숫자", "다음 수열의 빈칸은?\n4, 7, 12, 19, 28, ?", ["37","39","40","42"], 1],
-  ["숫자", "다음 수열의 빈칸은?\n1, 3, 7, 15, 31, ?", ["47","55","62","63"], 3],
-  ["논리", "모든 장미는 꽃이다.\n어떤 꽃은 금방 시든다.\n\n이로부터 확실하게 말할 수 있는 것은?",
-    ["모든 장미는 금방 시든다","장미 중 금방 시드는 것이 있는지는 확실하지 않다","장미는 절대 시들지 않는다","모든 꽃은 장미다"], 1],
-  ["논리", "철수는 영희보다 크고, 영희는 민수보다 크다.\n세 사람 중 가장 작은 사람은?", ["철수","영희","민수","알 수 없다"], 2],
-  ["논리", "3시 15분일 때 시침과 분침 사이의 각도는?", ["0도","7.5도","15도","30도"], 1],
-  ["논리", "공과 배트의 합이 11,000원이고 배트가 공보다 10,000원 비싸다.\n공의 가격은?", ["1,000원","500원","5,000원","100원"], 1],
-  ["논리", "기계 5대가 5분 동안 물건 5개를 만든다.\n기계 100대가 물건 100개를 만들려면 몇 분이 걸릴까?", ["5분","20분","50분","100분"], 0],
-  ["논리", "호수의 연꽃이 매일 두 배로 늘어나 48일째에 호수 전체를 덮었다.\n호수의 절반을 덮은 날은?", ["24일째","46일째","47일째","45일째"], 2],
-  ["언어", "의사 : 병원 = 선생님 : ?", ["학교","교과서","학생","시험"], 0],
-  ["언어", "나머지와 성격이 다른 하나는?", ["사과","배","당근","포도"], 2],
-  ["언어", "뜨겁다 : 차갑다 = 높다 : ?", ["크다","낮다","멀다","깊다"], 1],
-  ["언어", "나머지와 성격이 다른 하나는?\n16, 25, 36, 48, 49", ["16","25","48","49"], 2],
+  ["Numbers", "What comes next?\n2, 4, 8, 16, ?", ["24","30","32","36"], 2],
+  ["Numbers", "What comes next?\n1, 1, 2, 3, 5, 8, ?", ["11","12","13","14"], 2],
+  ["Numbers", "What comes next?\n3, 6, 11, 18, 27, ?", ["36","38","40","45"], 1],
+  ["Numbers", "What comes next?\n2, 6, 12, 20, 30, ?", ["40","42","44","48"], 1],
+  ["Numbers", "What comes next?\n1, 4, 9, 16, 25, ?", ["30","34","36","49"], 2],
+  ["Numbers", "What comes next?\n81, 27, 9, 3, ?", ["0","1","2","6"], 1],
+  ["Numbers", "What comes next?\n2, 3, 5, 7, 11, 13, ?", ["15","16","17","19"], 2],
+  ["Numbers", "What comes next?\n1, 2, 6, 24, 120, ?", ["240","600","720","840"], 2],
+  ["Numbers", "What comes next?\n4, 7, 12, 19, 28, ?", ["37","39","40","42"], 1],
+  ["Numbers", "What comes next?\n1, 3, 7, 15, 31, ?", ["47","55","62","63"], 3],
+  ["Logic", "All roses are flowers.\nSome flowers fade quickly.\n\nWhat can we say for sure?",
+    ["All roses fade quickly","We cannot be sure any roses fade quickly","Roses never fade","All flowers are roses"], 1],
+  ["Logic", "Tom is taller than Amy, and Amy is taller than Ben.\nWho is the shortest?", ["Tom","Amy","Ben","Cannot tell"], 2],
+  ["Logic", "At 3:15, what is the angle between the hour and minute hands?", ["0°","7.5°","15°","30°"], 1],
+  ["Logic", "A bat and a ball cost $1.10 in total.\nThe bat costs $1.00 more than the ball.\nHow much is the ball?", ["$0.10","$0.05","$0.50","$0.01"], 1],
+  ["Logic", "5 machines make 5 items in 5 minutes.\nHow long do 100 machines take to make 100 items?", ["5 min","20 min","50 min","100 min"], 0],
+  ["Logic", "Lily pads double every day and cover the whole lake on day 48.\nOn which day was half the lake covered?", ["Day 24","Day 46","Day 47","Day 45"], 2],
+  ["Words", "Doctor : Hospital = Teacher : ?", ["School","Textbook","Student","Exam"], 0],
+  ["Words", "Which one does not belong?", ["Apple","Pear","Carrot","Grape"], 2],
+  ["Words", "Hot : Cold = High : ?", ["Big","Low","Far","Deep"], 1],
+  ["Words", "Which one does not belong?\n16, 25, 36, 48, 49", ["16","25","48","49"], 2],
 ];
 
 // ---------- 도형 문제용 SVG 도우미 ----------
@@ -143,32 +143,32 @@ const tri = r => sh("tri", 30, 30, 34, { rot: r, c: PAL[2] });
 const L3 = [[0,0],[0,1],[0,2],[1,2]];
 
 const FIGQ = [
-  ["도형", "도형이 일정한 방향으로 회전하고 있어요.\n빈칸에 들어갈 모양은?",
+  ["Shapes", "The shape keeps rotating.\nWhat comes next?",
     [O(tri(270)), O(tri(0)), O(tri(90)), O(tri(180))], 0, row([tri(0), tri(90), tri(180), null])],
-  ["도형", "점의 개수가 규칙적으로 늘어나고 있어요.\n빈칸에 들어갈 그림은?",
+  ["Shapes", "The dots keep increasing.\nWhat comes next?",
     [O(dots(4)), O(dots(3)), O(dots(5)), O(dots(6))], 0, row([dots(1), dots(2), dots(3), null])],
-  ["도형", "도형이 반복되는 규칙을 찾아보세요.\n빈칸에 들어갈 도형은?",
+  ["Shapes", "Find the repeating pattern.\nWhat comes next?",
     [O(sh("circle", 30, 30, 34, { c: PAL[0] })), O(sh("tri", 30, 30, 34, { c: PAL[2] })), O(sh("square", 30, 30, 32, { c: PAL[1] })), O(sh("star", 30, 30, 40, { c: PAL[3] }))], 0,
     row([sh("tri", 30, 30, 34, { c: PAL[2] }), sh("square", 30, 30, 32, { c: PAL[1] }), sh("circle", 30, 30, 34, { c: PAL[0] }), sh("tri", 30, 30, 34, { c: PAL[2] }), sh("square", 30, 30, 32, { c: PAL[1] }), null])],
-  ["도형", "화살표가 45도씩 돌아가고 있어요.\n빈칸에 들어갈 화살표는?",
+  ["Shapes", "The arrow turns 45° each step.\nWhat comes next?",
     [O(arrow(180)), O(arrow(225)), O(arrow(0)), O(arrow(270))], 0, row([arrow(0), arrow(45), arrow(90), arrow(135), null])],
-  ["도형", "나머지와 모양이 다른 도형은 몇 번일까요?",
-    ["1번", "2번", "3번", "4번"], 2,
+  ["Shapes", "Which shape is different?",
+    ["#1", "#2", "#3", "#4"], 2,
     row([sh("hex", 30, 30, 38, { c: PAL[4] }), sh("hex", 30, 30, 38, { c: PAL[4], rot: 15 }), sh("pent", 30, 30, 38, { c: PAL[4] }), sh("hex", 30, 30, 38, { c: PAL[4], rot: 30 })]), true],
-  ["도형", "가로줄과 세로줄에 같은 도형이 한 번씩만 들어가요.\n물음표에 들어갈 도형은?",
+  ["Shapes", "Each row and column has each shape once.\nWhat goes in the ?",
     [O(sh("square", 30, 30, 32, { c: PAL[1] })), O(sh("circle", 30, 30, 34, { c: PAL[0] })), O(sh("tri", 30, 30, 34, { c: PAL[2] })), O(sh("star", 30, 30, 40, { c: PAL[3] }))], 0,
     grid3([sh("circle", 30, 30, 34, { c: PAL[0] }), sh("square", 30, 30, 32, { c: PAL[1] }), sh("tri", 30, 30, 34, { c: PAL[2] }),
            sh("square", 30, 30, 32, { c: PAL[1] }), sh("tri", 30, 30, 34, { c: PAL[2] }), sh("circle", 30, 30, 34, { c: PAL[0] }),
            sh("tri", 30, 30, 34, { c: PAL[2] }), sh("circle", 30, 30, 34, { c: PAL[0] }), null])],
-  ["도형", "원의 크기가 규칙적으로 커지고 있어요.\n빈칸에 들어갈 원은?",
+  ["Shapes", "The circle keeps growing.\nWhat comes next?",
     [O(sh("circle", 30, 30, 42, { c: PAL[4] })), O(sh("circle", 30, 30, 34, { c: PAL[4] })), O(sh("circle", 30, 30, 52, { c: PAL[4] })), O(sh("circle", 30, 30, 26, { c: PAL[4] }))], 0,
     row([sh("circle", 30, 30, 10, { c: PAL[4] }), sh("circle", 30, 30, 18, { c: PAL[4] }), sh("circle", 30, 30, 26, { c: PAL[4] }), sh("circle", 30, 30, 34, { c: PAL[4] }), null])],
-  ["도형", "색칠된 부분이 시계 방향으로 돌아가고 있어요.\n빈칸에 들어갈 그림은?",
+  ["Shapes", "The colored part moves clockwise.\nWhat comes next?",
     [O(quadr(3)), O(quadr(0)), O(quadr(1)), O(quadr(2))], 0, row([quadr(0), quadr(1), quadr(2), null])],
-  ["도형", "위 도형을 거울에 비춘 것처럼 좌우로 뒤집으면 어떤 모양일까요?",
+  ["Shapes", "Which is the mirror image (flipped left-right)?",
     [O(mino([[1,0],[1,1],[1,2],[0,2]], PAL[1])), O(mino([[0,2],[0,1],[0,0],[1,0]], PAL[1])), O(mino([[2,0],[1,0],[0,0],[0,1]], PAL[1])), O(mino(L3, PAL[1]))], 0,
     row([mino(L3, PAL[0])])],
-  ["도형", "도형마다 숫자가 정해져 있어요.\n\n▲ + ▲ + ▲ = 9\n▲ + ■ = 8\n■ + ● = 9\n\n● 는 얼마일까요?", ["3", "4", "5", "6"], 1],
+  ["Shapes", "Each shape is a number.\n\n▲ + ▲ + ▲ = 9\n▲ + ■ = 8\n■ + ● = 9\n\nWhat is ●?", ["3", "4", "5", "6"], 1],
 ];
 QUESTIONS.splice(10, 0, ...FIGQ);          // 숫자 문제 뒤에 도형 문제를 끼워 넣음 (총 30문제)
 
@@ -199,7 +199,7 @@ function render() {
   $("fig").innerHTML = fig || "";
   $("fig").style.display = fig ? "block" : "none";
   $("opts").className = "opts" + (opts[0] && opts[0].svg ? " grid" : "");
-  $("no").textContent = "문제 " + (idx+1) + " / " + QUESTIONS.length;
+  $("no").textContent = "Q " + (idx+1) + " / " + QUESTIONS.length;
   $("prog").style.width = (idx / QUESTIONS.length * 100) + "%";
   $("cat").textContent = cat;
   $("q").textContent = q;
@@ -223,7 +223,7 @@ function choose(btn, ok) {
   if (ok) correct++;
   document.querySelectorAll(".opt").forEach(b => { if (b.dataset.ok) b.classList.add("ok"); });
   if (!ok) btn.classList.add("bad");
-  $("next").textContent = idx === QUESTIONS.length - 1 ? "결과 보기 ▶" : "다음 ▶";
+  $("next").textContent = idx === QUESTIONS.length - 1 ? "Results ▶" : "Next ▶";
   $("next").classList.remove("hide");
 }
 
@@ -232,17 +232,17 @@ function finish() {
   const sec = Math.floor((Date.now()-startedAt)/1000);
   const iq = 55 + Math.round(correct * 3); // 0개 55 ~ 15개 100(평균) ~ 30개 145
   const tiers = [
-    [130, "🏆 최상위 두뇌", "거의 만점! 패턴을 꿰뚫어 보는 눈이 대단해요."],
-    [115, "🌟 우수한 두뇌", "논리와 수리 감각이 뛰어난 편이에요."],
-    [100, "🙂 평균 이상", "탄탄한 사고력을 가졌어요."],
-    [85,  "👍 평균", "무난하고 균형 잡힌 두뇌예요."],
-    [0,   "😅 워밍업 필요", "다시 도전하면 점수가 훨씬 오를 거예요!"],
+    [130, "🏆 Genius", "Almost perfect!"],
+    [115, "🌟 Sharp", "Great logic and number sense."],
+    [100, "🙂 Above average", "Solid thinking."],
+    [85,  "👍 Average", "Nicely balanced."],
+    [0,   "😅 Warming up", "Try again!"],
   ];
   const t = tiers.find(x => iq >= x[0]);
   $("iq").textContent = iq;
   $("title").textContent = t[1];
   $("detail").textContent = t[2];
-  $("stat").textContent = `정답 ${correct} / ${QUESTIONS.length} · 소요 시간 ${fmt(sec)}`;
+  $("stat").textContent = `${correct} / ${QUESTIONS.length} correct · ${fmt(sec)}`;
   show("end");
   if (window.GL) GL.report("iq", correct * 1000 - Math.min(sec, 999), { iq, correct, sec });
 }
@@ -251,14 +251,14 @@ $("start").onclick = start;
 $("next").onclick = () => { ++idx < QUESTIONS.length ? render() : finish(); };
 $("again").onclick = start;
 $("share").onclick = async () => {
-  const url = location.href, text = `나의 두뇌 IQ 테스트 결과: ${$("iq").textContent}점! 너도 해봐 👉`;
+  const url = location.href, text = `My IQ Test score: ${$("iq").textContent}! Try it 👉`;
   try {
-    if (navigator.share) await navigator.share({ title: "두뇌 IQ 테스트", text, url });
-    else { await navigator.clipboard.writeText(text + " " + url); alert("링크가 복사됐어요!"); }
+    if (navigator.share) await navigator.share({ title: "IQ Test", text, url });
+    else { await navigator.clipboard.writeText(text + " " + url); alert("Link copied!"); }
   } catch (e) {}
 };
 </script>
-<script>window.GL_GAMES = [{ key:"iq", label:"IQ 테스트", dir:"desc", fmt:d => `${d.iq}점 · 정답 ${d.correct}/30 · ${d.sec}초` }];</script>
+<script>window.GL_GAMES = [{ key:"iq", label:"IQ Test", dir:"desc", fmt:d => `IQ ${d.iq} · ${d.correct}/30 · ${d.sec}s` }];</script>
 <script type="module" src="gl.js"></script>
 </body>
 </html>

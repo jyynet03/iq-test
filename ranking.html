@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>총 랭킹</title>
+<title>Leaderboard</title>
 <style>
   :root { --bg:#232527; --panel:#393b3d; --line:#0d0d0e; --fg:#fff; }
   * { box-sizing:border-box; }
@@ -28,22 +28,22 @@
 </head>
 <body>
 <div id="app">
-  <a class="back" href="index.html">← 게임랜드</a>
-  <h1>👑 총 랭킹</h1>
-  <div class="panel"><ol id="list"><li class="msg">불러오는 중...</li></ol></div>
+  <a class="back" href="index.html">← GameLand</a>
+  <h1>👑 Leaderboard</h1>
+  <div class="panel"><ol id="list"><li class="msg">Loading...</li></ol></div>
 </div>
 
 <script type="module">
 import { firebaseConfig } from "./firebase-config.js";
 const BOARDS = [
   { key:"iq",            label:"IQ",       dir:"desc" },
-  { key:"cherry_easy",   label:"체리(쉬움)", dir:"asc" },
-  { key:"cherry_normal", label:"체리(보통)", dir:"asc" },
-  { key:"cherry_hard",   label:"체리(어려움)", dir:"asc" },
-  { key:"race",          label:"경마",     dir:"desc" },
-  { key:"tower",         label:"탑쌓기",   dir:"desc" },
-  { key:"ball",          label:"공",       dir:"desc" },
-  { key:"cat",           label:"고양이",   dir:"desc" },
+  { key:"cherry_easy",   label:"Cherry E", dir:"asc" },
+  { key:"cherry_normal", label:"Cherry N", dir:"asc" },
+  { key:"cherry_hard",   label:"Cherry H", dir:"asc" },
+  { key:"race",          label:"Race",     dir:"desc" },
+  { key:"tower",         label:"Tower",   dir:"desc" },
+  { key:"ball",          label:"Ball",       dir:"desc" },
+  { key:"cat",           label:"Cats",   dir:"desc" },
 ];
 const TOP = 10;                               // 등수 점수: 1등 10점 … 10등 1점
 const list = document.getElementById("list");
@@ -63,7 +63,7 @@ try {
       snap.forEach(d => {
         const v = d.data(), pt = TOP - i, u = total[v.uid] || (total[v.uid] = { nick: v.nick, pt: 0, firsts: 0, parts: [] });
         u.pt += pt; if (i === 0) u.firsts++;
-        u.parts.push(`${b.label} ${i + 1}등(+${pt})`);
+        u.parts.push(`${b.label} #${i + 1}(+${pt})`);
         i++;
       });
     } catch (e) { /* 아직 기록 없는 게임은 건너뜀 */ }
@@ -71,16 +71,16 @@ try {
 
   const rows = Object.values(total).sort((a, b) => b.pt - a.pt || b.firsts - a.firsts);
   list.textContent = "";
-  if (!rows.length) list.appendChild(el("li", "msg", "아직 기록이 없어요. 게임을 하고 랭킹에 도전해 보세요!"));
+  if (!rows.length) list.appendChild(el("li", "msg", "No records yet."));
   rows.slice(0, 50).forEach((r, i) => {
     const li = el("li"), top = el("div", "top");
-    top.append(el("span", "n", i < 3 ? ["🥇","🥈","🥉"][i] : String(i + 1)), el("span", "nm", r.nick), el("span", "pt", r.pt + "점"));
+    top.append(el("span", "n", i < 3 ? ["🥇","🥈","🥉"][i] : String(i + 1)), el("span", "nm", r.nick), el("span", "pt", r.pt + " pts"));
     li.append(top);
     list.appendChild(li);
   });
 } catch (e) {
   list.textContent = "";
-  list.appendChild(el("li", "msg", "랭킹을 불러오지 못했어요."));
+  list.appendChild(el("li", "msg", "Could not load the leaderboard."));
 }
 </script>
 </body>

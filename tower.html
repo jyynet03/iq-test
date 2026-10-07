@@ -1,191 +1,175 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>블록 탑쌓기</title>
+<title>Block Tower</title>
 <style>
-  :root { --bg:#12121a; --fg:#fff; --acc:#f43f5e; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); overflow:hidden; overscroll-behavior:none;
-    font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif; }
-  #app { height:100dvh; max-width:480px; margin:0 auto; padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
-  a.back { color:#fff; opacity:.6; text-decoration:none; font-size:14px; }
-  .top { display:flex; justify-content:space-between; font-weight:700; font-size:16px; }
+  html, body { margin:0; height:100%; overflow:hidden; overscroll-behavior:none; }
+  #app { height:100dvh; max-width:520px; margin:0 auto; padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+  a.back { text-decoration:none; font-size:14px; }
+  .top { display:flex; justify-content:space-between; font-weight:800; font-size:16px; }
   #wrap { position:relative; flex:1; min-height:0; }
-  canvas { width:100%; height:100%; display:block; border-radius:16px; touch-action:none; background:linear-gradient(#1e3a8a,#7dd3fc); }
-  #ov { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
-    background:rgba(0,0,0,.55); border-radius:16px; text-align:center; padding:20px; }
-  #ov h1 { margin:0; font-size:28px; }
-  #ov p { margin:0; line-height:1.6; opacity:.9; font-size:15px; }
-  #ov .big { font-size:48px; font-weight:800; color:#fde047; }
-  .btn { border:0; border-radius:14px; padding:14px 30px; font-size:18px; font-weight:700; background:var(--acc); color:#fff; cursor:pointer; margin-top:6px; }
+  canvas { width:100%; height:100%; display:block; border-radius:14px; touch-action:none; }
+  #ov { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; text-align:center; padding:20px; }
+  #ov h1 { margin:0; font-size:30px; }
+  #ov p { margin:0; opacity:.8; font-size:15px; }
+  #ov .big { font-size:52px; }
+  .btn { padding:14px 34px; font-size:18px; margin-top:6px; }
   .hide { display:none !important; }
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet"><link rel="stylesheet" href="theme.css">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet"><link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div id="app">
-  <a class="back" href="index.html">← 게임랜드</a>
-  <div class="top"><span id="score">0층</span><span id="best"></span></div>
+  <a class="back" href="index.html">← GameLand</a>
+  <div class="top"><span id="score">0</span><span id="best"></span></div>
   <div id="wrap">
     <canvas id="c"></canvas>
     <div id="ov">
-      <h1 id="ovt">🧱 블록 탑쌓기</h1>
+      <h1 id="ovt">Block Tower</h1>
       <div class="big hide" id="ovs"></div>
-      <p id="ovp">터치(스페이스)로 쌓기</p>
-      <button class="btn" id="go">시작</button>
+      <p id="ovp">Tap (or Space) to drop</p>
+      <button class="btn" id="go">Play</button>
     </div>
   </div>
 </div>
 
 <script>
+// 3D 아이소메트릭 탑쌓기: 블록이 x축 → z축 번갈아 미끄러지고, y축으로 쌓인다
 const cv = document.getElementById("c"), ctx = cv.getContext("2d");
 const $ = id => document.getElementById(id);
-const LH = 38;                       // 한 줄 높이
-const DX = 20, DY = -14;             // 입체감: 블록 깊이를 오른쪽 위로 비껴 그리는 크기
-let W = 0, H = 0, dpr = 1;
-let state = "ready", layers = [], cur, dir, fall = [], cam = 0, camT = 0, perfect = 0, msg = "", msgT = 0, last = 0;
+const HUE = 222;                     // 파스텔 단색 계열 (블루)
+const SIZE = 10, SLAB = 1;           // 바닥 블록 크기, 한 층 두께
+let W = 0, H = 0, dpr = 1, U = 16;
+let state = "ready", layers, cur, axis, dir, fall, cam, camT, combo, flash, last = 0;
 
 function resize() {
-  dpr = window.devicePixelRatio || 1;
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
   W = cv.clientWidth; H = cv.clientHeight;
   cv.width = W * dpr; cv.height = H * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  U = Math.min(W / 30, H / 34);
 }
 addEventListener("resize", resize);
-
 function getBest() { try { return parseInt(localStorage.getItem("tower_best")) || 0; } catch (e) { return 0; } }
 function setBest(v) { try { localStorage.setItem("tower_best", v); } catch (e) {} }
 
-const hue = i => (i * 28) % 360;
+// 월드 좌표(x, z, y) → 화면 좌표
+const sx = (x, z) => W / 2 + (x - z) * 0.866 * U;
+const sy = (x, z, y) => H * 0.62 + (x + z) * 0.5 * U - (y - cam) * U * 1.15;
+const col = (i, dl) => `hsl(${HUE + i * 1.5} ${42 - Math.min(i, 20) * .6}% ${Math.min(90, 70 + dl + (i % 2) * 3)}%)`;
 
-function mkLayer(x, w, i) { return { x, w, i }; }
+function drawBox(b, i, alpha) {
+  const { x0, x1, z0, z1, y } = b, y1 = y + SLAB;
+  const P = (x, z, yy) => [sx(x, z), sy(x, z, yy)];
+  const face = (pts, c) => { ctx.beginPath(); ctx.moveTo(...pts[0]); for (const p of pts.slice(1)) ctx.lineTo(...p); ctx.closePath(); ctx.fillStyle = c; ctx.fill(); };
+  ctx.globalAlpha = alpha == null ? 1 : alpha;
+  face([P(x1, z0, y1), P(x1, z1, y1), P(x1, z1, y), P(x1, z0, y)], col(i, -8));    // 오른쪽 면 (x축 끝)
+  face([P(x0, z1, y1), P(x1, z1, y1), P(x1, z1, y), P(x0, z1, y)], col(i, -20));   // 왼쪽 면 (z축 끝)
+  face([P(x0, z0, y1), P(x1, z0, y1), P(x1, z1, y1), P(x0, z1, y1)], col(i, 10));  // 윗면
+  ctx.globalAlpha = 1;
+}
 
 function newMover() {
   const p = layers[layers.length - 1];
-  cur = mkLayer(0, p.w, layers.length);
-  dir = Math.random() < 0.5 ? 1 : -1;
-  if (dir < 0) cur.x = W - cur.w;
+  axis = layers.length % 2 ? "x" : "z";
+  dir = 1;
+  cur = { x0: p.x0, x1: p.x1, z0: p.z0, z1: p.z1, y: p.y + SLAB };
+  const off = -18;                                           // 멀리서 미끄러져 들어옴
+  if (axis === "x") { cur.x0 += off; cur.x1 += off; } else { cur.z0 += off; cur.z1 += off; }
 }
 
 function start() {
   resize();
-  const bw = Math.min(200, W * 0.55);
-  layers = [mkLayer((W - bw) / 2, bw, 0)];
-  fall = []; cam = 0; camT = 0; perfect = 0; msg = ""; state = "play";
+  const h = SIZE / 2;
+  layers = [{ x0: -h, x1: h, z0: -h, z1: h, y: 0 }];
+  fall = []; cam = 0; camT = 0; combo = 0; flash = 0; state = "play";
   newMover();
   $("ov").classList.add("hide");
-  $("score").textContent = "0층";
-  last = performance.now();
+  $("score").textContent = "0";
 }
 
 function drop() {
   if (state !== "play") return;
   const p = layers[layers.length - 1];
-  const left = Math.max(cur.x, p.x), right = Math.min(cur.x + cur.w, p.x + p.w);
-  const ov = right - left;
-  if (ov <= 0) {                                   // 완전히 빗나감
-    fall.push({ x: cur.x, w: cur.w, i: cur.i, y: curY(), vy: 0 });
-    cur = null; return over();
-  }
-  if (Math.abs(cur.x - p.x) < 6) {                 // 퍼펙트
-    cur.x = p.x; cur.w = p.w; perfect++;
-    msg = perfect >= 3 ? "🔥 PERFECT x" + perfect : "✨ PERFECT"; msgT = 0.8;
+  const a0 = axis + "0", a1 = axis + "1";
+  const lo = Math.max(cur[a0], p[a0]), hi = Math.min(cur[a1], p[a1]);
+  if (hi - lo <= 0) { fall.push({ b: { ...cur }, i: layers.length, vy: 0, a: 1 }); cur = null; return over(); }
+  if (Math.abs(cur[a0] - p[a0]) < 0.3) {                    // PERFECT: 그대로 맞춤
+    cur[a0] = p[a0]; cur[a1] = p[a1]; combo++; flash = 0.5;
   } else {
-    perfect = 0;
-    const y = curY();
-    if (cur.x < p.x) fall.push({ x: cur.x, w: p.x - cur.x, i: cur.i, y, vy: 0 });
-    else fall.push({ x: p.x + p.w, w: cur.x + cur.w - (p.x + p.w), i: cur.i, y, vy: 0 });
-    cur.x = left; cur.w = ov;
+    combo = 0;
+    const cut = { ...cur };
+    if (cur[a0] < p[a0]) { cut[a1] = p[a0]; } else { cut[a0] = p[a1]; }
+    fall.push({ b: cut, i: layers.length, vy: 0, a: 1 });
+    cur[a0] = lo; cur[a1] = hi;
   }
   layers.push(cur);
-  $("score").textContent = (layers.length - 1) + "층";
-  camT = Math.max(0, (layers.length - 5) * LH);
+  camT = Math.max(0, layers.length - 6) * SLAB;
+  $("score").textContent = String(layers.length - 1);
   newMover();
 }
-
-const baseY = () => H - 50;
-const layerY = i => baseY() - i * LH + cam;
-const curY = () => layerY(layers.length);
 
 function over() {
   state = "over";
   const n = layers.length - 1, b = getBest(), nb = n > b;
   if (nb) setBest(n);
   if (window.GL && n > 0) GL.report("tower", n);
-  $("ovt").textContent = nb ? "🎉 최고 기록!" : "💥 무너졌다!";
-  $("ovs").textContent = n + "층";
-  $("ovs").classList.remove("hide");
-  $("ovp").textContent = nb ? "새로운 기록이에요!" : "내 최고 기록 " + b + "층";
-  $("go").textContent = "다시 하기";
+  $("ovt").textContent = nb ? "New Best!" : "Game Over";
+  $("ovs").textContent = n; $("ovs").classList.remove("hide");
+  $("ovp").textContent = nb ? "" : "Best " + b;
+  $("go").textContent = "Retry";
   $("ov").classList.remove("hide");
-  $("best").textContent = "최고 " + Math.max(b, n) + "층";
+  $("best").textContent = "Best " + Math.max(b, n);
 }
 
 function update(dt) {
-  cam += (camT - cam) * Math.min(1, 6 * dt);
-  for (const f of fall) { f.vy += 1400 * dt; f.y += f.vy * dt; }
-  fall = fall.filter(f => f.y < H + 80);
-  if (msgT > 0) msgT -= dt;
+  cam += (camT - cam) * Math.min(1, 5 * dt);
+  for (const f of fall) { f.vy += 30 * dt; f.b.y -= f.vy * dt; f.a -= dt * 0.8; }
+  fall = fall.filter(f => f.a > 0);
+  if (flash > 0) flash -= dt;
   if (state !== "play") return;
-  const n = layers.length - 1;
-  const sp = Math.min(560, 170 + n * 9);
-  cur.x += dir * sp * dt;
-  if (cur.x < 0) { cur.x = 0; dir = 1; }
-  if (cur.x + cur.w > W - DX) { cur.x = W - DX - cur.w; dir = -1; }
-}
-
-// 입체 블록: 앞면 + 윗면 + 오른쪽 옆면 (사선 투영)
-function quad(a, b, c, d, color) {
-  ctx.fillStyle = color; ctx.beginPath();
-  ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.lineTo(d[0], d[1]);
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "rgba(0,0,0,.35)"; ctx.lineWidth = 1.5; ctx.stroke();
-}
-
-function drawBox(x, w, topY, h, hh) {
-  const x2 = x + w;
-  quad([x, topY], [x2, topY], [x2, topY + h], [x, topY + h], `hsl(${hh} 70% 50%)`);                       // 앞면
-  quad([x, topY], [x2, topY], [x2 + DX, topY + DY], [x + DX, topY + DY], `hsl(${hh} 80% 70%)`);           // 윗면
-  quad([x2, topY], [x2 + DX, topY + DY], [x2 + DX, topY + DY + h], [x2, topY + h], `hsl(${hh} 70% 36%)`); // 옆면
-  ctx.fillStyle = "rgba(255,255,255,.22)"; ctx.fillRect(x + 3, topY + 3, Math.max(0, w - 6), 4);          // 앞면 광택
-}
-
-function drawLayer(L, y) {
-  drawBox(L.x, L.w, y - LH + 3, LH - 3, hue(L.i));
+  const n = layers.length - 1, sp = Math.min(26, 11 + n * 0.45);
+  const a0 = axis + "0", a1 = axis + "1";
+  cur[a0] += dir * sp * dt; cur[a1] += dir * sp * dt;
+  if (cur[a0] > 12) dir = -1;
+  if (cur[a1] < -12) dir = 1;
 }
 
 function draw() {
   ctx.clearRect(0, 0, W, H);
-  // 땅 (입체 바닥판)
-  const gy = baseY() + cam;
-  quad([0, gy], [W - DX, gy], [W, gy + DY], [DX, gy + DY], "#4ade80");
-  ctx.fillStyle = "#166534"; ctx.fillRect(0, gy, W - DX, H);
-  ctx.fillStyle = "#14532d"; ctx.beginPath(); ctx.moveTo(W - DX, gy); ctx.lineTo(W, gy + DY); ctx.lineTo(W, H); ctx.lineTo(W - DX, H); ctx.fill();
-  for (const L of layers) drawLayer(L, layerY(L.i));
-  for (const f of fall) drawLayer(f, f.y);
-  if (cur) drawLayer(cur, curY());
-  if (msgT > 0) {
-    ctx.globalAlpha = Math.min(1, msgT * 2); ctx.fillStyle = "#fde047"; ctx.font = "bold 26px sans-serif";
-    ctx.textAlign = "center"; ctx.fillText(msg, W / 2, 60); ctx.globalAlpha = 1;
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, `hsl(${HUE} 45% 92%)`); g.addColorStop(1, `hsl(${HUE} 30% 76%)`);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // 바닥 그림자
+  ctx.fillStyle = "rgba(40,50,90,.12)";
+  ctx.beginPath(); ctx.ellipse(sx(0, 0), sy(0, 0, 0) + U * 2, U * 11, U * 5.5, 0, 0, 7); ctx.fill();
+  layers.forEach((L, i) => drawBox(L, i));
+  if (cur) drawBox(cur, layers.length);
+  for (const f of fall) drawBox(f.b, f.i, Math.max(0, f.a));
+  if (flash > 0) {
+    ctx.globalAlpha = Math.min(1, flash * 2); ctx.fillStyle = "#fff"; ctx.font = "900 26px 'Noto Sans KR',sans-serif";
+    ctx.textAlign = "center"; ctx.fillText(combo > 1 ? "PERFECT x" + combo : "PERFECT", W / 2, 54); ctx.globalAlpha = 1;
   }
 }
 
 function loop(t) {
   const dt = Math.min(0.05, (t - last) / 1000); last = t;
-  update(dt); draw();
+  if (layers) { update(dt); draw(); }
   requestAnimationFrame(loop);
 }
 
 cv.addEventListener("pointerdown", e => { e.preventDefault(); drop(); });
-addEventListener("keydown", e => { if (e.code === "Space") { e.preventDefault(); if (state === "play") drop(); } });
+addEventListener("keydown", e => { if (e.code === "Space") { e.preventDefault(); state === "play" ? drop() : start(); } });
 $("go").onclick = start;
-$("best").textContent = getBest() ? "최고 " + getBest() + "층" : "";
+$("best").textContent = getBest() ? "Best " + getBest() : "";
 resize();
+{ const h = SIZE / 2; layers = [{ x0: -h, x1: h, z0: -h, z1: h, y: 0 }]; cam = 0; camT = 0; fall = []; flash = 0; cur = null; }
 requestAnimationFrame(t => { last = t; loop(t); });
 </script>
-<script>window.GL_GAMES = [{ key:"tower", label:"블록 탑쌓기", dir:"desc", fmt:d => d.value + "층" }];</script>
+<script>window.GL_GAMES = [{ key:"tower", label:"Block Tower", dir:"desc", fmt:d => d.value + " floors" }];</script>
 <script type="module" src="gl.js"></script>
 </body>
 </html>

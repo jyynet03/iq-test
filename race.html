@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>경마 레이싱</title>
+<title>Horse Race</title>
 <style>
   :root { --bg:#12121a; --fg:#fff; --acc:#22c55e; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -26,15 +26,15 @@
 </head>
 <body>
 <div id="app">
-  <a class="back" href="index.html">← 게임랜드</a>
+  <a class="back" href="index.html">← GameLand</a>
   <div class="top"><span id="score">0 m</span><span id="spd"></span><span id="best"></span></div>
   <div id="wrap">
     <canvas id="c"></canvas>
     <div id="ov">
-      <h1 id="ovt">🐎 경마 레이싱</h1>
+      <h1 id="ovt">🐎 Horse Race</h1>
       <div class="big hide" id="ovs"></div>
-      <p id="ovp">← → 또는 터치로 피하기</p>
-      <button class="btn" id="go">시작</button>
+      <p id="ovp">← → or touch to dodge</p>
+      <button class="btn" id="go">Play</button>
     </div>
   </div>
 </div>
@@ -82,13 +82,13 @@ function over() {
   const m = Math.floor(dist), b = getBest(), nb = m > b;
   if (nb) setBest(m);
   if (window.GL && m > 0) GL.report("race", m);
-  $("ovt").textContent = nb ? "🎉 최고 기록!" : "💥 충돌!";
+  $("ovt").textContent = nb ? "New Best!" : "Crashed!";
   $("ovs").textContent = m + " m";
   $("ovs").classList.remove("hide");
-  $("ovp").textContent = nb ? "새로운 기록을 세웠어요!" : "내 최고 기록 " + b + " m";
-  $("go").textContent = "다시 하기";
+  $("ovp").textContent = nb ? "" : "Best " + b + " m";
+  $("go").textContent = "Retry";
   $("ov").classList.remove("hide");
-  $("best").textContent = "최고 " + Math.max(b, m) + " m";
+  $("best").textContent = "Best " + Math.max(b, m) + " m";
 }
 
 function spawnWave() {
@@ -203,10 +203,10 @@ addEventListener("keydown", e => {
 addEventListener("keyup", e => { keys[e.key] = false; });
 
 $("go").onclick = start;
-$("best").textContent = getBest() ? "최고 " + getBest() + " m" : "";
+$("best").textContent = getBest() ? "Best " + getBest() + " m" : "";
 resize(); reset(); draw();
 </script>
-<script>window.GL_GAMES = [{ key:"race", label:"경마 레이싱", dir:"desc", fmt:d => d.value + " m" }];</script>
+<script>window.GL_GAMES = [{ key:"race", label:"Horse Race", dir:"desc", fmt:d => d.value + " m" }];</script>
 <script type="module" src="gl.js"></script>
 </body>
 </html>

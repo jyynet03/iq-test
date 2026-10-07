@@ -27,15 +27,15 @@ async function init() {
     return "h" + hex.slice(0, 40) + "@gameland.user";
   }
   const errText = e => ({
-    "auth/email-already-in-use": "이미 사용 중인 닉네임이에요. 다른 닉네임을 써 주세요.",
-    "auth/weak-password": "비밀번호는 6자 이상이어야 해요.",
-    "auth/invalid-credential": "닉네임 또는 비밀번호가 틀렸어요.",
-    "auth/wrong-password": "닉네임 또는 비밀번호가 틀렸어요.",
-    "auth/user-not-found": "닉네임 또는 비밀번호가 틀렸어요.",
-    "auth/too-many-requests": "시도가 너무 많아요. 잠시 후 다시 해 주세요.",
-    "auth/operation-not-allowed": "아직 로그인 기능이 켜지지 않았어요. (관리자 설정 필요)",
-    "auth/network-request-failed": "인터넷 연결을 확인해 주세요.",
-  }[e && e.code] || "문제가 생겼어요. 잠시 후 다시 해 주세요.");
+    "auth/email-already-in-use": "That nickname is taken.",
+    "auth/weak-password": "Password must be 6+ characters.",
+    "auth/invalid-credential": "Wrong nickname or password.",
+    "auth/wrong-password": "Wrong nickname or password.",
+    "auth/user-not-found": "Wrong nickname or password.",
+    "auth/too-many-requests": "Too many tries. Wait a moment.",
+    "auth/operation-not-allowed": "Sign-in is not enabled yet.",
+    "auth/network-request-failed": "Check your connection.",
+  }[e && e.code] || "Something went wrong. Try again.");
 
   async function loadNick(user) {
     try { const s = await getDoc(doc(db, "users", user.uid)); return s.exists() ? s.data().nick : null; } catch (e) { return null; }
@@ -46,7 +46,7 @@ async function init() {
   });
 
   async function register(nick, pw) {
-    if (!NICK_RE.test(nick)) throw { code: "x", text: "닉네임은 2~12자, 한글·영문·숫자·_ - 만 쓸 수 있어요." };
+    if (!NICK_RE.test(nick)) throw { code: "x", text: "Nickname: 2–12 letters, numbers, _ or -." };
     const c = await createUserWithEmailAndPassword(auth, await emailOf(nick), pw);
     await setDoc(doc(db, "users", c.user.uid), { nick: nick.trim(), ts: serverTimestamp() });
     me = { uid: c.user.uid, nick: nick.trim() };
@@ -66,12 +66,12 @@ async function init() {
       const old = await getDoc(ref);
       if (old.exists()) {
         const ov = old.data().value;
-        if (cfg.dir === "asc" ? p.value >= ov : p.value <= ov) return toast("이번 기록은 내 최고 기록이 아니에요.");
+        if (cfg.dir === "asc" ? p.value >= ov : p.value <= ov) return toast("Not your best this time.");
       }
       await setDoc(ref, { uid: me.uid, nick: me.nick, value: p.value, ...(p.info || {}), ts: serverTimestamp() });
-      tab = p.key; toast("🏆 랭킹에 기록했어요!", true);
+      tab = p.key; toast("🏆 Saved to the leaderboard!", true);
       if (open) render();
-    } catch (e) { toast("기록 저장에 실패했어요."); }
+    } catch (e) { toast("Could not save your score."); }
   }
 
   // ---------- 화면 ----------
@@ -103,7 +103,7 @@ async function init() {
   #gl-t{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:80;background:#222;color:#fff;border-radius:20px;padding:10px 18px;font-size:14px;display:none;font-family:sans-serif;max-width:92%;text-align:center}`;
   document.head.appendChild(st);
 
-  const btn = el("button", { id: "gl-btn" }, "🏆 랭킹");
+  const btn = el("button", { id: "gl-btn" }, "🏆 Ranking");
   const ov = el("div", { id: "gl-ov" }), pn = el("div", { id: "gl-p" }), tt = el("div", { id: "gl-t" });
   ov.appendChild(pn); document.body.append(btn, ov, tt);
   btn.onclick = () => { open = true; msgText = ""; render(); };
@@ -114,42 +114,42 @@ async function init() {
   let tto; function toast(t, ok) {
     tt.textContent = t; tt.style.display = "block"; tt.style.background = ok ? "#166534" : "#333";
     clearTimeout(tto); tto = setTimeout(() => tt.style.display = "none", 3200);
-    if (!me) { tt.append(" "); const a = el("button", { onclick: () => { open = true; render(); } }, "로그인"); tt.append(a); }
+    if (!me) { tt.append(" "); const a = el("button", { onclick: () => { open = true; render(); } }, "Sign in"); tt.append(a); }
   }
 
   async function render() {
     ov.classList.add("on"); pn.textContent = "";
-    const h = el("h2"); h.append(el("span", {}, "🏆 랭킹 · 내 계정"), el("button", { className: "x", onclick: close }, "✕")); pn.appendChild(h);
+    const h = el("h2"); h.append(el("span", {}, "🏆 Ranking"), el("button", { className: "x", onclick: close }, "✕")); pn.appendChild(h);
 
     // 계정
     if (me && me.nick) {
       const row = el("div", { className: "row" });
-      row.append(el("div", { style: "flex:2;align-self:center;font-weight:800" }, "👤 " + me.nick + " 님"),
-        el("button", { className: "b alt", onclick: async () => { await signOut(auth); me = null; msgText = ""; render(); } }, "로그아웃"));
+      row.append(el("div", { style: "flex:2;align-self:center;font-weight:800" }, "👤 " + me.nick + ""),
+        el("button", { className: "b alt", onclick: async () => { await signOut(auth); me = null; msgText = ""; render(); } }, "Sign out"));
       pn.appendChild(row);
     } else {
-      pn.appendChild(el("div", { className: "hint" }, "닉네임을 만들면 랭킹에 기록돼요."));
-      const ni = el("input", { placeholder: "닉네임 (2~12자)", maxLength: 12, autocomplete: "username" });
-      const pi = el("input", { placeholder: "비밀번호 (6자 이상)", type: "password", autocomplete: "current-password" });
+      pn.appendChild(el("div", { className: "hint" }, "Create a nickname to join the leaderboard."));
+      const ni = el("input", { placeholder: "Nickname", maxLength: 12, autocomplete: "username" });
+      const pi = el("input", { placeholder: "Password (6+)", type: "password", autocomplete: "current-password" });
       const go = async mode => {
         const nick = ni.value.trim(), pw = pi.value;
-        if (!nick || !pw) { msgText = "닉네임과 비밀번호를 입력해 주세요."; msgOk = false; return render(); }
+        if (!nick || !pw) { msgText = "Enter nickname and password."; msgOk = false; return render(); }
         try {
           if (mode === "reg") await register(nick, pw); else await login(nick, pw);
-          msgText = mode === "reg" ? "가입 완료! 이제 기록이 랭킹에 올라가요." : "로그인했어요!"; msgOk = true;
+          msgText = mode === "reg" ? "Account created!" : "Signed in!"; msgOk = true;
           if (pending) { const p = pending; pending = null; await submit(p); }
         } catch (e) { msgText = e.text || errText(e); msgOk = false; }
         render();
       };
       const row = el("div", { className: "row" });
-      row.append(el("button", { className: "b", onclick: () => go("login") }, "로그인"), el("button", { className: "b alt", onclick: () => go("reg") }, "새 닉네임 만들기"));
+      row.append(el("button", { className: "b", onclick: () => go("login") }, "Sign in"), el("button", { className: "b alt", onclick: () => go("reg") }, "Create account"));
       pn.append(ni, pi, row,
-        el("div", { className: "hint" }, "실명 금지 · 비밀번호 분실 시 복구 불가"));
+        el("div", { className: "hint" }, "No real names · Lost passwords cannot be recovered"));
     }
     pn.appendChild(el("div", { className: "msg", style: "color:" + (msgOk ? "#4ade80" : "#f87171") }, msgText));
 
     // 랭킹
-    pn.appendChild(el("h3", {}, "랭킹 TOP 20"));
+    pn.appendChild(el("h3", {}, "Top 20"));
     if (GAMES.length > 1) {
       const tabs = el("div", { className: "tabs" });
       GAMES.forEach(g => tabs.appendChild(el("button", { className: "tab" + (g.key === tab ? " on" : ""), onclick: () => { tab = g.key; render(); } }, g.label)));
@@ -157,11 +157,11 @@ async function init() {
     }
     const cfg = GAMES.find(g => g.key === tab), list = el("ol"); list.textContent = "";
     pn.appendChild(list);
-    list.appendChild(el("li", {}, "불러오는 중..."));
+    list.appendChild(el("li", {}, "Loading..."));
     try {
       const snap = await getDocs(query(collection(db, "rank_" + tab), orderBy("value", cfg.dir), limit(20)));
       list.textContent = "";
-      if (snap.empty) list.appendChild(el("li", {}, "아직 기록이 없어요. 첫 번째 주인공이 되어보세요!"));
+      if (snap.empty) list.appendChild(el("li", {}, "No records yet."));
       let i = 0;
       snap.forEach(d => {
         const v = d.data(); i++;
@@ -170,7 +170,7 @@ async function init() {
           el("span", { className: "nm" }, v.nick), el("span", { className: "v" }, cfg.fmt(v)));
         list.appendChild(li);
       });
-    } catch (e) { list.textContent = ""; list.appendChild(el("li", {}, "랭킹을 불러오지 못했어요.")); }
+    } catch (e) { list.textContent = ""; list.appendChild(el("li", {}, "Could not load.")); }
   }
 
   // ---------- 게임에서 호출 ----------
@@ -180,7 +180,7 @@ async function init() {
       const p = { key, value, info };
       if (me && me.nick) return submit(p);
       pending = p;
-      toast("로그인하면 이 기록이 랭킹에 올라가요!");
+      toast("Sign in to save this score!");
     },
   };
 }

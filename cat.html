@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>고양이 밥주기</title>
+<title>Feed the Cats</title>
 <style>
   :root { --bg:#12121a; --card:#1e1e2b; --fg:#fff; --acc:#fb923c; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
@@ -40,23 +40,23 @@
 </head>
 <body>
 <div id="app">
-  <a class="back" href="index.html">← 게임랜드</a>
-  <div class="top"><span id="score">0점</span><span id="lives">❤️❤️❤️</span><span id="best"></span></div>
+  <a class="back" href="index.html">← GameLand</a>
+  <div class="top"><span id="score">0</span><span id="lives">❤️❤️❤️</span><span id="best"></span></div>
   <div id="wrap">
     <div id="room"></div>
     <div class="foods" id="foods"></div>
     <div id="ov">
-      <h1 id="ovt">🐱 고양이 밥주기</h1>
+      <h1 id="ovt">🐱 Feed the Cats</h1>
       <div class="big hide" id="ovs"></div>
-      <p id="ovp">밥 고르고 → 고양이 터치</p>
-      <button class="btn" id="go">시작</button>
+      <p id="ovp">Pick food → tap a cat</p>
+      <button class="btn" id="go">Play</button>
     </div>
   </div>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
-const FOODS = [["🐟","생선"],["🍖","고기"],["🥛","우유"],["🍤","새우"]];
+const FOODS = [["🐟","Fish"],["🍖","Meat"],["🥛","Milk"],["🍤","Shrimp"]];
 const CATS = ["🐱","🐈","🐈‍⬛","😺"];
 let state = "ready", slots = [], sel = 0, score = 0, lives = 3, elapsed = 0, spawnT = 0, timer = null, lastT = 0;
 
@@ -82,7 +82,7 @@ const slotEls = [...room.children];
 function renderSel() { [...foodsEl.children].forEach((b, i) => b.classList.toggle("sel", i === sel)); }
 
 function hud() {
-  $("score").textContent = score + "점";
+  $("score").textContent = String(score);
   $("lives").textContent = "❤️".repeat(Math.max(0, lives)) + "🖤".repeat(3 - Math.max(0, lives));
 }
 
@@ -127,7 +127,7 @@ function feed(i) {
     floatText(i, "+" + pts, "#16a34a");
     clearSlot(i, "😻", 500);
   } else {
-    floatText(i, "😾 아니야!", "#dc2626");
+    floatText(i, "😾 Nope!", "#dc2626");
     clearSlot(i, "😾", 500);
     hurt();
   }
@@ -143,13 +143,13 @@ function end() {
   const b = getBest(), nb = score > b;
   if (nb) setBest(score);
   if (window.GL && score > 0) GL.report("cat", score);
-  $("ovt").textContent = nb ? "🎉 최고 기록!" : "고양이들이 떠났어요 😿";
-  $("ovs").textContent = score + "점";
+  $("ovt").textContent = nb ? "New Best!" : "Game Over 😿";
+  $("ovs").textContent = String(score);
   $("ovs").classList.remove("hide");
-  $("ovp").textContent = nb ? "새로운 기록이에요!" : "내 최고 기록 " + b + "점";
-  $("go").textContent = "다시 하기";
+  $("ovp").textContent = nb ? "" : "Best " + b;
+  $("go").textContent = "Retry";
   $("ov").classList.remove("hide");
-  $("best").textContent = "최고 " + Math.max(b, score);
+  $("best").textContent = "Best " + Math.max(b, score);
 }
 
 function tick() {
@@ -163,7 +163,7 @@ function tick() {
     bar.style.width = (r * 100) + "%";
     bar.style.background = r > 0.5 ? "#22c55e" : r > 0.25 ? "#eab308" : "#ef4444";
     if (c.left <= 0) {
-      floatText(i, "😿 배고파…", "#dc2626");
+      floatText(i, "😿 Hungry…", "#dc2626");
       clearSlot(i, "😿", 500);
       hurt();
       if (state !== "play") return;
@@ -182,10 +182,10 @@ function start() {
 }
 
 $("go").onclick = start;
-$("best").textContent = getBest() ? "최고 " + getBest() : "";
+$("best").textContent = getBest() ? "Best " + getBest() : "";
 renderSel(); hud();
 </script>
-<script>window.GL_GAMES = [{ key:"cat", label:"고양이 밥주기", dir:"desc", fmt:d => d.value + "점" }];</script>
+<script>window.GL_GAMES = [{ key:"cat", label:"Feed the Cats", dir:"desc", fmt:d => d.value + " pts" }];</script>
 <script type="module" src="gl.js"></script>
 </body>
 </html>

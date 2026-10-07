@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>게임 요청 게시판</title>
+<title>Game Requests</title>
 <style>
   :root { --bg:#12121a; --card:#1e1e2b; --fg:#fff; --acc:#38bdf8; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -36,19 +36,19 @@
 </head>
 <body>
 <div id="app">
-  <a class="back" href="index.html">← 게임랜드</a>
-  <h1>💬 게임 요청 게시판</h1>
-  <p class="sub">만들어줬으면 하는 게임을 남겨주세요</p>
+  <a class="back" href="index.html">← GameLand</a>
+  <h1>💬 Game Requests</h1>
+  <p class="sub">Tell us what game to make next</p>
 
-  <div id="setup" class="notice hide">🛠 게시판은 준비 중이에요. 곧 열릴 예정입니다!</div>
+  <div id="setup" class="notice hide">🛠 Coming soon!</div>
 
   <form id="form" class="card hide">
-    <label for="nick">닉네임 (최대 12자)</label>
-    <input id="nick" maxlength="12" autocomplete="off" placeholder="예: 고양이집사">
-    <label for="text" style="margin-top:12px">요청 내용 (2~200자)</label>
-    <textarea id="text" maxlength="200" placeholder="예: 테트리스 만들어주세요!"></textarea>
-    <div class="row"><span>개인정보는 쓰지 마세요</span><span id="cnt">0 / 200</span></div>
-    <button class="btn" id="send" type="submit">등록하기</button>
+    <label for="nick">Nickname (max 12)</label>
+    <input id="nick" maxlength="12" autocomplete="off" placeholder="e.g. CatLover">
+    <label for="text" style="margin-top:12px">Request (2–200 chars)</label>
+    <textarea id="text" maxlength="200" placeholder="e.g. Please make Tetris!"></textarea>
+    <div class="row"><span>No personal info, please</span><span id="cnt">0 / 200</span></div>
+    <button class="btn" id="send" type="submit">Post</button>
   </form>
   <div id="msg"></div>
   <div id="list" style="display:flex;flex-direction:column;gap:10px"></div>
@@ -82,25 +82,25 @@ if (!firebaseConfig) {
   $("form").addEventListener("submit", async e => {
     e.preventDefault();
     const nick = $("nick").value.trim(), text = $("text").value.trim();
-    if (!nick) return say("닉네임을 입력해 주세요.", false);
-    if (text.length < 2) return say("내용을 2자 이상 써 주세요.", false);
+    if (!nick) return say("Enter a nickname.", false);
+    if (text.length < 2) return say("Write at least 2 characters.", false);
     const wait = 30000 - (Date.now() - (parseInt(store.get("board_last")) || 0));
-    if (wait > 0) return say(Math.ceil(wait / 1000) + "초 뒤에 다시 글을 쓸 수 있어요.", false);
+    if (wait > 0) return say(Math.ceil(wait / 1000) + "s until you can post again.", false);
     $("send").disabled = true;
     try {
       await addDoc(col, { nick, text, likes: 0, ts: serverTimestamp() });
       store.set("board_nick", nick); store.set("board_last", Date.now());
       $("text").value = ""; $("cnt").textContent = "0 / 200";
-      say("등록됐어요! 고마워요 🙌", true);
+      say("Posted! Thanks 🙌", true);
     } catch (err) {
-      say("등록에 실패했어요. 잠시 후 다시 시도해 주세요.", false);
+      say("Failed to post. Try again later.", false);
     }
     $("send").disabled = false;
   });
 
   const liked = new Set(JSON.parse(store.get("board_liked") || "[]"));
   const fmt = t => {
-    if (!t) return "방금";
+    if (!t) return "now";
     const d = t.toDate(), p = n => String(n).padStart(2, "0");
     return `${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
   };
@@ -108,7 +108,7 @@ if (!firebaseConfig) {
   onSnapshot(query(col, orderBy("ts", "desc"), limit(100)), snap => {
     const list = $("list");
     list.textContent = "";
-    if (snap.empty) { list.innerHTML = '<p class="sub">만들어줬으면 하는 게임을 남겨주세요</p>'; return; }
+    if (snap.empty) { list.innerHTML = '<p class="sub">Tell us what game to make next</p>'; return; }
     snap.forEach(d => {
       const v = d.data();
       const card = document.createElement("div"); card.className = "card post";
@@ -127,7 +127,7 @@ if (!firebaseConfig) {
       card.append(meta, body, b);
       list.appendChild(card);
     });
-  }, () => say("글을 불러오지 못했어요.", false));
+  }, () => say("Could not load posts.", false));
 }
 </script>
 </body>

@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>공 맞추기</title>
+<title>Ball Hit</title>
 <style>
   :root { --bg:#12121a; --fg:#fff; --acc:#f59e0b; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -26,15 +26,15 @@
 </head>
 <body>
 <div id="app">
-  <a class="back" href="index.html">← 게임랜드</a>
-  <div class="top"><span id="score">0점</span><span id="lives">❤️❤️❤️❤️❤️</span><span id="best"></span></div>
+  <a class="back" href="index.html">← GameLand</a>
+  <div class="top"><span id="score">0</span><span id="lives">❤️❤️❤️❤️❤️</span><span id="best"></span></div>
   <div id="wrap">
     <canvas id="c"></canvas>
     <div id="ov">
-      <h1 id="ovt">⚽ 공 맞추기</h1>
+      <h1 id="ovt">⚽ Ball Hit</h1>
       <div class="big hide" id="ovs"></div>
-      <p id="ovp">공을 터치! 💣는 누르지 마세요</p>
-      <button class="btn" id="go">시작</button>
+      <p id="ovp">Tap the balls · avoid 💣</p>
+      <button class="btn" id="go">Play</button>
     </div>
   </div>
 </div>
@@ -70,7 +70,7 @@ function start() {
 }
 
 function hud() {
-  $("score").textContent = score + "점";
+  $("score").textContent = String(score);
   $("lives").textContent = "❤️".repeat(Math.max(0, lives)) + "🖤".repeat(LIVES - Math.max(0, lives));
 }
 
@@ -93,13 +93,13 @@ function over() {
   const b = getBest(), nb = score > b;
   if (nb) setBest(score);
   if (window.GL && score > 0) GL.report("ball", score);
-  $("ovt").textContent = nb ? "🎉 최고 기록!" : "게임 오버";
-  $("ovs").textContent = score + "점";
+  $("ovt").textContent = nb ? "New Best!" : "Game Over";
+  $("ovs").textContent = String(score);
   $("ovs").classList.remove("hide");
-  $("ovp").textContent = nb ? "새로운 기록이에요!" : "내 최고 기록 " + b + "점";
-  $("go").textContent = "다시 하기";
+  $("ovp").textContent = nb ? "" : "Best " + b;
+  $("go").textContent = "Retry";
   $("ov").classList.remove("hide");
-  $("best").textContent = "최고 " + Math.max(b, score);
+  $("best").textContent = "Best " + Math.max(b, score);
 }
 
 function burst(x, y, color) {
@@ -181,7 +181,7 @@ function hit(x, y) {
   balls.splice(balls.indexOf(best.b), 1);
   if (best.b.bomb) {
     burst(best.p.x, best.p.y, "#f59e0b");
-    floaters.push({ x: best.p.x, y: best.p.y, text: "💥 폭탄!", color: "#ef4444", life: 0.8 });
+    floaters.push({ x: best.p.x, y: best.p.y, text: "💥 BOMB", color: "#ef4444", life: 0.8 });
     lives--; hud(); if (lives <= 0) over();
     return;
   }
@@ -204,11 +204,11 @@ function loop(t) {
 }
 
 $("go").onclick = start;
-$("best").textContent = getBest() ? "최고 " + getBest() : "";
+$("best").textContent = getBest() ? "Best " + getBest() : "";
 resize();
 requestAnimationFrame(t => { last = t; loop(t); });
 </script>
-<script>window.GL_GAMES = [{ key:"ball", label:"공 맞추기", dir:"desc", fmt:d => d.value + "점" }];</script>
+<script>window.GL_GAMES = [{ key:"ball", label:"Ball Hit", dir:"desc", fmt:d => d.value + " pts" }];</script>
 <script type="module" src="gl.js"></script>
 </body>
 </html>
