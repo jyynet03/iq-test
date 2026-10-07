@@ -20,7 +20,11 @@
   .bar i { display:block; height:100%; width:0; background:var(--acc); transition:width .3s; }
   .tag { display:inline-block; font-size:12px; background:#2c2c3d; border-radius:20px; padding:3px 10px; margin-bottom:10px; }
   .q { font-size:20px; font-weight:700; line-height:1.5; word-break:keep-all; white-space:pre-line; }
+  .fig { margin:14px 0 0; text-align:center; }
+  .fig svg { display:inline-block; }
   .opts { display:flex; flex-direction:column; gap:10px; }
+  .opts.grid { display:grid; grid-template-columns:1fr 1fr; }
+  .opts.grid .opt { display:grid; place-items:center; padding:10px; }
   .opt { border:2px solid #34344a; background:var(--card); color:var(--fg); font-size:17px; padding:15px;
     border-radius:14px; text-align:left; cursor:pointer; }
   .opt:active { transform:scale(.98); }
@@ -39,8 +43,8 @@
   <a href="index.html" style="color:#fff;opacity:.6;text-decoration:none;font-size:14px">← 게임랜드</a>
   <section id="intro" class="card">
     <h1>🧠 두뇌 IQ 테스트</h1>
-    <p class="center muted" style="margin:6px 0 16px">숫자 · 논리 · 언어 문제 20개</p>
-    <p>숫자 규칙 찾기, 논리 추론, 언어 유추 문제를 풀고 내 두뇌 점수를 확인해 보세요. 문제마다 보기를 고르면 바로 정답이 공개됩니다.</p>
+    <p class="center muted" style="margin:6px 0 16px">숫자 · 도형 · 논리 · 언어 문제 30개</p>
+    <p>숫자 규칙 찾기, 도형 그림 추리, 논리 추론, 언어 유추 문제를 풀고 내 두뇌 점수를 확인해 보세요. 문제마다 보기를 고르면 바로 정답이 공개됩니다.</p>
     <p class="muted" style="margin:14px 0 18px">※ 재미로 만든 오락용 테스트입니다. 실제 IQ 검사와는 무관하며, 결과는 의학적·학문적 의미가 없습니다. 이름이나 연락처 등 개인정보는 수집하지 않습니다.</p>
     <button class="btn" id="start">시작하기</button>
   </section>
@@ -48,7 +52,7 @@
   <section id="quiz" class="hide" style="display:contents">
     <div class="top"><span id="no"></span><span id="time">⏱ 0:00</span></div>
     <div class="bar"><i id="prog"></i></div>
-    <div class="card"><span class="tag" id="cat"></span><div class="q" id="q"></div></div>
+    <div class="card"><span class="tag" id="cat"></span><div class="q" id="q"></div><div class="fig" id="fig"></div></div>
     <div class="opts" id="opts"></div>
     <button class="btn alt hide" id="next">다음 ▶</button>
   </section>
@@ -90,6 +94,85 @@ const QUESTIONS = [
   ["언어", "나머지와 성격이 다른 하나는?\n16, 25, 36, 48, 49", ["16","25","48","49"], 2],
 ];
 
+// ---------- 도형 문제용 SVG 도우미 ----------
+const PAL = ["#7c5cff","#f43f5e","#22c55e","#f59e0b","#38bdf8"];
+const pts = a => a.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
+const ngon = (x, y, r, n) => pts(Array.from({ length:n }, (_, i) => { const a = (-90 + 360 / n * i) * Math.PI / 180; return [x + r * Math.cos(a), y + r * Math.sin(a)]; }));
+const starp = (x, y, r) => pts(Array.from({ length:10 }, (_, i) => { const a = (-90 + 36 * i) * Math.PI / 180, q = i % 2 ? r * 0.45 : r; return [x + q * Math.cos(a), y + q * Math.sin(a)]; }));
+function sh(t, x, y, s, o) {
+  o = o || {};
+  const c = o.c || PAL[0], r = s / 2;
+  const st = `fill="${o.hollow ? "none" : c}" stroke="${c}" stroke-width="${o.hollow ? 4 : 2}" stroke-linejoin="round"`;
+  const rot = o.rot ? ` transform="rotate(${o.rot} ${x} ${y})"` : "";
+  let g;
+  if (t === "circle") g = `<circle cx="${x}" cy="${y}" r="${r}" ${st}/>`;
+  else if (t === "square") g = `<rect x="${x - r}" y="${y - r}" width="${s}" height="${s}" rx="2" ${st}/>`;
+  else if (t === "tri") g = `<polygon points="${pts([[x, y - r], [x + r, y + r * 0.8], [x - r, y + r * 0.8]])}" ${st}/>`;
+  else if (t === "star") g = `<polygon points="${starp(x, y, r)}" ${st}/>`;
+  else if (t === "hex") g = `<polygon points="${ngon(x, y, r, 6)}" ${st}/>`;
+  else g = `<polygon points="${ngon(x, y, r, 5)}" ${st}/>`;
+  return `<g${rot}>${g}</g>`;
+}
+const BOX = `<rect x="1" y="1" width="58" height="58" rx="10" fill="#12121a" stroke="#34344a" stroke-width="2"/>`;
+const QM = `<text x="30" y="41" text-anchor="middle" font-size="32" font-weight="800" fill="#fde047">?</text>`;
+function row(cells) {                       // 칸 여러 개를 가로로 (null = 물음표 칸)
+  const w = cells.length * 70 - 10;
+  return `<svg viewBox="0 0 ${w} 60" style="width:100%;max-width:${Math.min(Math.round(w * 1.5), 420)}px">` +
+    cells.map((c, i) => `<g transform="translate(${i * 70} 0)">${BOX}${c === null ? QM : c}</g>`).join("") + `</svg>`;
+}
+function grid3(cells) {                     // 3x3 표
+  return `<svg viewBox="0 0 200 200" style="width:100%;max-width:240px">` + cells.map((c, i) =>
+    `<g transform="translate(${(i % 3) * 70} ${Math.floor(i / 3) * 70})">${BOX}${c === null ? QM : c}</g>`).join("") + `</svg>`;
+}
+const O = inner => ({ svg: inner });        // 그림 보기
+const DOTP = [[18,16],[42,16],[18,30],[42,30],[18,44],[42,44]];
+const dots = n => DOTP.slice(0, n).map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="${PAL[1]}"/>`).join("");
+const arrow = r => `<g transform="rotate(${r} 30 30)"><line x1="30" y1="46" x2="30" y2="16" stroke="${PAL[2]}" stroke-width="5" stroke-linecap="round"/><polygon points="30,8 40,22 20,22" fill="${PAL[2]}"/></g>`;
+const quadr = q => {                        // 0=오른쪽위 1=오른쪽아래 2=왼쪽아래 3=왼쪽위 사분면을 칠함
+  const a1 = (-90 + 90 * q) * Math.PI / 180, a2 = a1 + Math.PI / 2, R = 22;
+  const p1 = [30 + R * Math.cos(a1), 30 + R * Math.sin(a1)], p2 = [30 + R * Math.cos(a2), 30 + R * Math.sin(a2)];
+  return `<path d="M30 30 L${p1[0].toFixed(1)} ${p1[1].toFixed(1)} A${R} ${R} 0 0 1 ${p2[0].toFixed(1)} ${p2[1].toFixed(1)} Z" fill="${PAL[3]}"/>` +
+    `<circle cx="30" cy="30" r="${R}" fill="none" stroke="#6b6b85" stroke-width="2"/><line x1="8" y1="30" x2="52" y2="30" stroke="#6b6b85"/><line x1="30" y1="8" x2="30" y2="52" stroke="#6b6b85"/>`;
+};
+function mino(cells, color) {               // 네모 4개로 이루어진 조각
+  const xs = cells.map(c => c[0]), ys = cells.map(c => c[1]), u = 14;
+  const w = Math.max(...xs) - Math.min(...xs) + 1, h = Math.max(...ys) - Math.min(...ys) + 1;
+  const ox = 30 - w * u / 2 - Math.min(...xs) * u, oy = 30 - h * u / 2 - Math.min(...ys) * u;
+  return cells.map(c => `<rect x="${ox + c[0] * u}" y="${oy + c[1] * u}" width="${u - 1}" height="${u - 1}" rx="2" fill="${color}"/>`).join("");
+}
+const tri = r => sh("tri", 30, 30, 34, { rot: r, c: PAL[2] });
+const L3 = [[0,0],[0,1],[0,2],[1,2]];
+
+const FIGQ = [
+  ["도형", "도형이 일정한 방향으로 회전하고 있어요.\n빈칸에 들어갈 모양은?",
+    [O(tri(270)), O(tri(0)), O(tri(90)), O(tri(180))], 0, row([tri(0), tri(90), tri(180), null])],
+  ["도형", "점의 개수가 규칙적으로 늘어나고 있어요.\n빈칸에 들어갈 그림은?",
+    [O(dots(4)), O(dots(3)), O(dots(5)), O(dots(6))], 0, row([dots(1), dots(2), dots(3), null])],
+  ["도형", "도형이 반복되는 규칙을 찾아보세요.\n빈칸에 들어갈 도형은?",
+    [O(sh("circle", 30, 30, 34, { c: PAL[0] })), O(sh("tri", 30, 30, 34, { c: PAL[2] })), O(sh("square", 30, 30, 32, { c: PAL[1] })), O(sh("star", 30, 30, 40, { c: PAL[3] }))], 0,
+    row([sh("tri", 30, 30, 34, { c: PAL[2] }), sh("square", 30, 30, 32, { c: PAL[1] }), sh("circle", 30, 30, 34, { c: PAL[0] }), sh("tri", 30, 30, 34, { c: PAL[2] }), sh("square", 30, 30, 32, { c: PAL[1] }), null])],
+  ["도형", "화살표가 45도씩 돌아가고 있어요.\n빈칸에 들어갈 화살표는?",
+    [O(arrow(180)), O(arrow(225)), O(arrow(0)), O(arrow(270))], 0, row([arrow(0), arrow(45), arrow(90), arrow(135), null])],
+  ["도형", "나머지와 모양이 다른 도형은 몇 번일까요?",
+    ["1번", "2번", "3번", "4번"], 2,
+    row([sh("hex", 30, 30, 38, { c: PAL[4] }), sh("hex", 30, 30, 38, { c: PAL[4], rot: 15 }), sh("pent", 30, 30, 38, { c: PAL[4] }), sh("hex", 30, 30, 38, { c: PAL[4], rot: 30 })]), true],
+  ["도형", "가로줄과 세로줄에 같은 도형이 한 번씩만 들어가요.\n물음표에 들어갈 도형은?",
+    [O(sh("square", 30, 30, 32, { c: PAL[1] })), O(sh("circle", 30, 30, 34, { c: PAL[0] })), O(sh("tri", 30, 30, 34, { c: PAL[2] })), O(sh("star", 30, 30, 40, { c: PAL[3] }))], 0,
+    grid3([sh("circle", 30, 30, 34, { c: PAL[0] }), sh("square", 30, 30, 32, { c: PAL[1] }), sh("tri", 30, 30, 34, { c: PAL[2] }),
+           sh("square", 30, 30, 32, { c: PAL[1] }), sh("tri", 30, 30, 34, { c: PAL[2] }), sh("circle", 30, 30, 34, { c: PAL[0] }),
+           sh("tri", 30, 30, 34, { c: PAL[2] }), sh("circle", 30, 30, 34, { c: PAL[0] }), null])],
+  ["도형", "원의 크기가 규칙적으로 커지고 있어요.\n빈칸에 들어갈 원은?",
+    [O(sh("circle", 30, 30, 42, { c: PAL[4] })), O(sh("circle", 30, 30, 34, { c: PAL[4] })), O(sh("circle", 30, 30, 52, { c: PAL[4] })), O(sh("circle", 30, 30, 26, { c: PAL[4] }))], 0,
+    row([sh("circle", 30, 30, 10, { c: PAL[4] }), sh("circle", 30, 30, 18, { c: PAL[4] }), sh("circle", 30, 30, 26, { c: PAL[4] }), sh("circle", 30, 30, 34, { c: PAL[4] }), null])],
+  ["도형", "색칠된 부분이 시계 방향으로 돌아가고 있어요.\n빈칸에 들어갈 그림은?",
+    [O(quadr(3)), O(quadr(0)), O(quadr(1)), O(quadr(2))], 0, row([quadr(0), quadr(1), quadr(2), null])],
+  ["도형", "위 도형을 거울에 비춘 것처럼 좌우로 뒤집으면 어떤 모양일까요?",
+    [O(mino([[1,0],[1,1],[1,2],[0,2]], PAL[1])), O(mino([[0,2],[0,1],[0,0],[1,0]], PAL[1])), O(mino([[2,0],[1,0],[0,0],[0,1]], PAL[1])), O(mino(L3, PAL[1]))], 0,
+    row([mino(L3, PAL[0])])],
+  ["도형", "도형마다 숫자가 정해져 있어요.\n\n▲ + ▲ + ▲ = 9\n▲ + ■ = 8\n■ + ● = 9\n\n● 는 얼마일까요?", ["3", "4", "5", "6"], 1],
+];
+QUESTIONS.splice(10, 0, ...FIGQ);          // 숫자 문제 뒤에 도형 문제를 끼워 넣음 (총 30문제)
+
 const $ = id => document.getElementById(id);
 let idx = 0, correct = 0, startedAt = 0, timer = null, locked = false;
 
@@ -112,17 +195,23 @@ function start() {
 }
 
 function render() {
-  const [cat, q, opts, ans] = QUESTIONS[idx];
+  const [cat, q, opts, ans, fig, keep] = QUESTIONS[idx];
   locked = false;
+  $("fig").innerHTML = fig || "";
+  $("fig").style.display = fig ? "block" : "none";
+  $("opts").className = "opts" + (opts[0] && opts[0].svg ? " grid" : "");
   $("no").textContent = "문제 " + (idx+1) + " / " + QUESTIONS.length;
   $("prog").style.width = (idx / QUESTIONS.length * 100) + "%";
   $("cat").textContent = cat;
   $("q").textContent = q;
   $("next").classList.add("hide");
   $("opts").innerHTML = "";
-  shuffle(opts.map((t, i) => ({ t, ok: i === ans }))).forEach(o => {
+  const list = opts.map((t, i) => ({ t, ok: i === ans }));
+  (keep ? list : shuffle(list)).forEach(o => {
     const b = document.createElement("button");
-    b.className = "opt"; b.textContent = o.t;
+    b.className = "opt";
+    if (o.t && o.t.svg) b.innerHTML = `<svg viewBox="0 0 60 60" width="68" height="68">${o.t.svg}</svg>`;
+    else b.textContent = o.t;
     b.onclick = () => choose(b, o.ok);
     b.dataset.ok = o.ok ? "1" : "";
     $("opts").appendChild(b);
@@ -142,7 +231,7 @@ function choose(btn, ok) {
 function finish() {
   clearInterval(timer);
   const sec = Math.floor((Date.now()-startedAt)/1000);
-  const iq = 55 + Math.round(correct * 4.5); // 0개 55 ~ 10개 100(평균) ~ 20개 145
+  const iq = 55 + Math.round(correct * 3); // 0개 55 ~ 15개 100(평균) ~ 30개 145
   const tiers = [
     [130, "🏆 최상위 두뇌", "거의 만점! 패턴을 꿰뚫어 보는 눈이 대단해요."],
     [115, "🌟 우수한 두뇌", "논리와 수리 감각이 뛰어난 편이에요."],
@@ -170,7 +259,7 @@ $("share").onclick = async () => {
   } catch (e) {}
 };
 </script>
-<script>window.GL_GAMES = [{ key:"iq", label:"IQ 테스트", dir:"desc", fmt:d => `${d.iq}점 · 정답 ${d.correct}/20 · ${d.sec}초` }];</script>
+<script>window.GL_GAMES = [{ key:"iq", label:"IQ 테스트", dir:"desc", fmt:d => `${d.iq}점 · 정답 ${d.correct}/30 · ${d.sec}초` }];</script>
 <script type="module" src="gl.js"></script>
 </body>
 </html>
