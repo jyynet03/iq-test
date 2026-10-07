@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Block Tower</title>
+<title>블록 탑쌓기</title>
 <style>
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html, body { margin:0; height:100%; overflow:hidden; overscroll-behavior:none; }
@@ -23,15 +23,15 @@
 </head>
 <body>
 <div id="app">
-  <a class="back" href="index.html">← <span class="brand" translate="no">애옹 Land</span></a>
+  <a class="back" href="index.html">← <span class="brand" translate="no">애옹 랜드</span></a>
   <div class="top"><span id="score">0</span><span id="best"></span></div>
   <div id="wrap">
     <canvas id="c"></canvas>
     <div id="ov">
-      <h1 id="ovt">Block Tower</h1>
+      <h1 id="ovt">블록 탑쌓기</h1>
       <div class="big hide" id="ovs"></div>
-      <p id="ovp">Tap (or Space) to drop</p>
-      <button class="btn" id="go">Play</button>
+      <p id="ovp">터치(스페이스)로 쌓기</p>
+      <button class="btn" id="go">시작</button>
     </div>
   </div>
 </div>
@@ -117,12 +117,12 @@ function over() {
   const n = layers.length - 1, b = getBest(), nb = n > b;
   if (nb) setBest(n);
   if (window.GL && n > 0) GL.report("tower", n);
-  $("ovt").textContent = nb ? "New Best!" : "Game Over";
+  $("ovt").textContent = nb ? "🎉 최고 기록!" : "무너졌다!";
   $("ovs").textContent = n; $("ovs").classList.remove("hide");
-  $("ovp").textContent = nb ? "" : "Best " + b;
-  $("go").textContent = "Retry";
+  $("ovp").textContent = nb ? "" : "최고 " + b;
+  $("go").textContent = "다시 하기";
   $("ov").classList.remove("hide");
-  $("best").textContent = "Best " + Math.max(b, n);
+  $("best").textContent = "최고 " + Math.max(b, n);
 }
 
 function update(dt) {
@@ -164,12 +164,12 @@ function loop(t) {
 cv.addEventListener("pointerdown", e => { e.preventDefault(); drop(); });
 addEventListener("keydown", e => { if (e.code === "Space") { e.preventDefault(); state === "play" ? drop() : start(); } });
 $("go").onclick = start;
-$("best").textContent = getBest() ? "Best " + getBest() : "";
+$("best").textContent = getBest() ? "최고 " + getBest() + "층" : "";
 resize();
 { const h = SIZE / 2; layers = [{ x0: -h, x1: h, z0: -h, z1: h, y: 0 }]; cam = 0; camT = 0; fall = []; flash = 0; cur = null; }
 requestAnimationFrame(t => { last = t; loop(t); });
 </script>
-<script>window.GL_GAMES = [{ key:"tower", label:"Block Tower", dir:"desc", fmt:d => d.value + " floors" }];</script>
+<script>window.GL_GAMES = [{ key:"tower", label:"블록 탑쌓기", dir:"desc", fmt:d => d.value + "층" }];</script>
 <script type="module" src="gl.js"></script>
 </body>
 </html>

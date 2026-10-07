@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Find the Cherry</title>
+<title>체리 찾아라</title>
 <style>
   :root { --bg:#12121a; --card:#1e1e2b; --fg:#fff; --acc:#f59e0b; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -36,15 +36,15 @@
 </head>
 <body>
 <div id="app">
-  <a class="back" href="index.html">← <span class="brand" translate="no">애옹 Land</span></a>
-  <h1>🍒 Find the Cherry</h1>
+  <a class="back" href="index.html">← <span class="brand" translate="no">애옹 랜드</span></a>
+  <h1>🍒 체리 찾아라</h1>
 
   <section id="menu" class="card">
     <div class="lv" id="lv"></div>
   </section>
 
   <section id="play" style="display:none; flex-direction:column; gap:10px">
-    <div class="top"><span id="lvname"></span><span id="time">0.0s</span><span id="pen"></span></div>
+    <div class="top"><span id="lvname"></span><span id="time">0.0초</span><span id="pen"></span></div>
     <div class="targets" id="targets"></div>
     <div id="field"><canvas id="base"></canvas><canvas id="mark"></canvas></div>
   </section>
@@ -53,7 +53,7 @@
     <p class="muted" style="text-align:center" id="endlv"></p>
     <div class="big" id="endtime"></div>
     <p style="text-align:center" id="endmsg"></p>
-    <div class="row"><button class="btn" id="again">Retry</button><button class="btn alt" id="tomenu">Levels</button></div>
+    <div class="row"><button class="btn" id="again">다시 하기</button><button class="btn alt" id="tomenu">단계 선택</button></div>
   </section>
 </div>
 
@@ -61,9 +61,9 @@
 const TARGET = "🍒", DECOY = "🍎", COUNT = 10;   // 사과 속에서 체리 10개 찾기
 // density: 화면을 사과가 덮는 정도 (클수록 겹쳐서 배경이 안 보임)
 const LEVELS = {
-  easy:   { name:"Easy",   size:34, density:2.0 },
-  normal: { name:"Normal", size:28, density:2.8 },
-  hard:   { name:"Hard",   size:22, density:3.8 },
+  easy:   { name:"쉬움",   size:34, density:2.0 },
+  normal: { name:"보통", size:28, density:2.8 },
+  hard:   { name:"어려움",   size:22, density:3.8 },
 };
 
 const $ = id => document.getElementById(id);
@@ -93,7 +93,7 @@ function drawMenu() {
     const b = document.createElement("button");
     b.className = "btn";
     const bt = best(k);
-    b.innerHTML = `${LEVELS[k].name}<small>${bt ? "🏅 " + bt.toFixed(1) + "s" : ""}</small>`;
+    b.innerHTML = `${LEVELS[k].name}<small>${bt ? "🏅 " + bt.toFixed(1) + "초" : ""}</small>`;
     b.onclick = () => begin(k);
     $("lv").appendChild(b);
   });
@@ -114,8 +114,8 @@ function begin(lv) {
   show("play");
   // 화면을 먼저 바로 보여주고, 그림은 다음 프레임에 그린다 (누르자마자 화면이 바뀌도록)
   over = true; clearInterval(tick);
-  $("time").textContent = "0.0s";
-  $("targets").textContent = "Loading...";
+  $("time").textContent = "0.0초";
+  $("targets").textContent = "🍎 사과를 까는 중...";
   requestAnimationFrame(() => setTimeout(() => build(L), 0));
 }
 
@@ -135,7 +135,7 @@ function build(L) {
   shuffle(items);
   for (let i = 0; i < COUNT; i++) items.splice(Math.floor(Math.random() * items.length * 0.4) + Math.floor(items.length * 0.6), 0, { e:TARGET, t:true });
 
-  $("targets").innerHTML = `<span class="t">${TARGET}</span><span>Find <b id="left">${COUNT}</b> cherries</span>`;
+  $("targets").innerHTML = `<span class="t">${TARGET}</span><span>사과 속 <b>체리</b> <b id="left">${COUNT}</b>개를 찾아라!</span>`;
 
   const n = items.length;
   const cols = Math.ceil(Math.sqrt(n * W / H)), rows = Math.ceil(n / cols);
@@ -162,7 +162,7 @@ function build(L) {
   over = false;
   start = Date.now();
   clearInterval(tick);
-  tick = setInterval(() => { $("time").textContent = elapsed().toFixed(1) + "s"; }, 100);
+  tick = setInterval(() => { $("time").textContent = elapsed().toFixed(1) + "초"; }, 100);
 }
 
 const elapsed = () => (Date.now() - start) / 1000 + penalty;
@@ -183,7 +183,7 @@ $("field").addEventListener("click", e => {
     if (found === total) finish();
   } else if (!targetsPos.some(t => t.done && Math.hypot(t.x - x, t.y - y) <= t.r)) {   // 이미 찾은 체리를 또 눌러도 벌칙 없음
     penalty += 3;
-    $("pen").textContent = "+" + penalty + "s";
+    $("pen").textContent = "+" + penalty + "초";
     const f = $("field"); f.classList.remove("flash"); void f.offsetWidth; f.classList.add("flash");
   }
 });
@@ -194,9 +194,9 @@ function finish() {
   const prev = best(level);
   const isBest = !prev || t < prev;
   if (isBest) saveBest(level, t);
-  $("endlv").textContent = LEVELS[level].name + " clear!";
-  $("endtime").textContent = t.toFixed(1) + "s";
-  $("endmsg").textContent = (penalty ? `+${penalty}s penalty · ` : "") + (isBest ? "New best!" : "Best " + prev.toFixed(1) + "s");
+  $("endlv").textContent = LEVELS[level].name + " 단계 클리어!";
+  $("endtime").textContent = t.toFixed(1) + "초";
+  $("endmsg").textContent = (penalty ? `벌칙 ${penalty}초 포함 · ` : "") + (isBest ? "🎉 내 최고 기록 갱신!" : "내 최고 기록 " + prev.toFixed(1) + "초");
   show("end");
   if (window.GL) GL.report("cherry_" + level, t);
 }
@@ -206,9 +206,9 @@ $("tomenu").onclick = () => { drawMenu(); show("menu"); };
 drawMenu();
 </script>
 <script>window.GL_GAMES = [
-  { key:"cherry_easy",   label:"Easy",   dir:"asc", fmt:d => d.value.toFixed(1) + "s" },
-  { key:"cherry_normal", label:"Normal", dir:"asc", fmt:d => d.value.toFixed(1) + "s" },
-  { key:"cherry_hard",   label:"Hard",   dir:"asc", fmt:d => d.value.toFixed(1) + "s" },
+  { key:"cherry_easy",   label:"쉬움",   dir:"asc", fmt:d => d.value.toFixed(1) + "초" },
+  { key:"cherry_normal", label:"보통",   dir:"asc", fmt:d => d.value.toFixed(1) + "초" },
+  { key:"cherry_hard",   label:"어려움", dir:"asc", fmt:d => d.value.toFixed(1) + "초" },
 ];</script>
 <script type="module" src="gl.js"></script>
 </body>
