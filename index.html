@@ -106,8 +106,12 @@ const ART = {
       `<ellipse cx="${x}" cy="${y}" rx="${s}" ry="${s * .88}" fill="${c}"/>` +
       (stripe ? `<path d="M${x - 3} ${y - s * .8} v5 M${x + 3} ${y - s * .8} v5" stroke="${hsl(H, 40, 35)}" stroke-width="2" stroke-linecap="round"/>` : "") +
       `<circle cx="${x - s * .35}" cy="${y - s * .05}" r="${s * .12}" fill="#2b2b33"/><circle cx="${x + s * .35}" cy="${y - s * .05}" r="${s * .12}" fill="#2b2b33"/>`;
-    for (let r = 0; r < 5; r++) for (let c = 0; c < 6; c++)
-      g += face(14 + c * 27 + (r % 2) * 13, 28 + r * 28, 11, hsl(H, 60, 66 - (r + c) % 3 * 4), true);
+    for (let r = 0; r < 5; r++) for (let c = 0; c < 6; c++) {                       // 병아리들
+      const x = 14 + c * 27 + (r % 2) * 13, y = 28 + r * 28;
+      g += `<circle cx="${x}" cy="${y}" r="12" fill="${hsl(50, 90, 66 - (r + c) % 3 * 4)}"/>` +
+           `<circle cx="${x - 4}" cy="${y - 2}" r="1.8" fill="#2b2b33"/><circle cx="${x + 4}" cy="${y - 2}" r="1.8" fill="#2b2b33"/>` +
+           `<polygon points="${x - 3},${y + 2} ${x + 3},${y + 2} ${x},${y + 6}" fill="#f59e0b"/>`;
+    }
     g += `<circle cx="92" cy="86" r="34" fill="#fff" opacity=".45" stroke="#fff" stroke-width="7"/>` +
          `<line x1="117" y1="111" x2="142" y2="136" stroke="#fff" stroke-width="11" stroke-linecap="round"/>` +
          face(92, 90, 17, hsl(40, 25, 88), false);
