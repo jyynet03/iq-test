@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>새총 연타</title>
+<style>
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
+  html, body { margin:0; height:100%; overflow:hidden; overscroll-behavior:none; }
+  #app { height:100dvh; max-width:720px; margin:0 auto; padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+  a.back { text-decoration:none; font-size:14px; }
+  .top { display:flex; justify-content:space-between; align-items:center; font-weight:800; font-size:16px; }
+  #wrap { position:relative; flex:1; min-height:0; }
+  canvas { width:100%; height:100%; display:block; border-radius:14px; touch-action:none; }
+  #ov { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; text-align:center; padding:20px; }
+  #ov h1 { margin:0; font-size:30px; }
+  #ov p { margin:0; opacity:.85; font-size:15px; }
+  #ov .big { font-size:40px; }
+  .btn { padding:14px 34px; font-size:18px; margin-top:6px; }
+  #tap { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); padding:18px 40px; font-size:22px; }
+  .hide { display:none !important; }
+  /* 아래 경로 막대 */
+  #route { position:relative; height:66px; border-radius:12px; padding:0 14px; }
+  #track { position:absolute; left:14px; right:14px; top:30px; height:6px; border-radius:3px; background:#3a3e47; }
+  #fill { position:absolute; left:0; top:0; bottom:0; width:0; border-radius:3px; background:var(--acc); }
+  .stop { position:absolute; top:-3px; width:12px; height:12px; margin-left:-6px; border-radius:50%; background:#5b606c; border:2px solid #17181c; }
+  .stop.on { background:var(--acc); }
+  .lab { position:absolute; font-size:9.5px; white-space:nowrap; transform:translateX(-50%); color:var(--sub); }
+  .lab.up { top:-22px; } .lab.dn { top:14px; }
+  .lab.on { color:var(--txt); font-weight:800; }
+  #me { position:absolute; top:-26px; font-size:22px; transform:translateX(-50%) scaleX(-1); transition:none; }
+  #pb { position:absolute; top:-20px; font-size:14px; transform:translateX(-50%); opacity:.8; }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet"><link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div id="app">
+  <a class="back" href="index.html">← <span class="brand" translate="no">애옹 랜드</span></a>
+  <div class="top"><span id="info">연타 0</span><span id="where">울산</span><span id="best"></span></div>
+  <div id="wrap">
+    <canvas id="c"></canvas>
+    <button class="btn hide" id="tap">연타!</button>
+    <div id="ov">
+      <h1 id="ovt">🐦 새총 연타</h1>
+      <div class="big hide" id="ovs"></div>
+      <p id="ovp">5초 동안 스페이스(또는 버튼) 연타!</p>
+      <button class="btn" id="go">시작</button>
+    </div>
+  </div>
+  <div id="route" class="card"><div id="track"><div id="fill"></div></div></div>
+</div>
+
+<script>
+// ---------- 경로 (울산 → 일본) ----------
+const PLACES = [
+  { n:"울산",   f:"🇰🇷", lm:["🏭","⚓","🐋"],  sky:[205,70,82], gr:[110,35,55] },
+  { n:"경주",   f:"🇰🇷", lm:["🛕","🌸","🏺"],  sky:[200,60,84], gr:[95,35,55] },
+  { n:"대구",   f:"🇰🇷", lm:["🍎","🌶️","🏙️"], sky:[30,70,84],  gr:[85,35,52] },
+  { n:"대전",   f:"🇰🇷", lm:["🔬","🚄","🏫"],  sky:[190,55,84], gr:[120,30,52] },
+  { n:"충주",   f:"🇰🇷", lm:["🌊","🍏","⛰️"],  sky:[180,55,82], gr:[140,30,50] },
+  { n:"서울",   f:"🇰🇷", lm:["🗼","🏯","🏢"],  sky:[215,60,80], gr:[100,25,50] },
+  { n:"북한",   f:"🇰🇵", lm:["🏔️","🌲","🚂"],  sky:[220,25,78], gr:[150,18,45] },
+  { n:"중국",   f:"🇨🇳", lm:["🐼","🏯","🧧"],  sky:[10,60,82],  gr:[90,30,48] },
+  { n:"몽골",   f:"🇲🇳", lm:["⛺","🐎","🐑"],  sky:[45,70,82],  gr:[60,40,62] },
+  { n:"독일",   f:"🇩🇪", lm:["🏰","🍺","🥨"],  sky:[210,30,78], gr:[115,30,45] },
+  { n:"이탈리아", f:"🇮🇹", lm:["🍕","🏛️","🍝"], sky:[25,75,84],  gr:[80,35,55] },
+  { n:"스페인", f:"🇪🇸", lm:["💃","🥘","🐂"],  sky:[40,80,82],  gr:[35,45,58] },
+  { n:"프랑스", f:"🇫🇷", lm:["🗼","🥐","🍷"],  sky:[230,55,84], gr:[100,30,52] },
+  { n:"영국",   f:"🇬🇧", lm:["💂","🎡","☂️"],  sky:[210,15,76], gr:[120,28,48] },
+  { n:"미국",   f:"🇺🇸", lm:["🗽","🏈","🍔"],  sky:[200,70,80], gr:[95,32,50] },
+  { n:"멕시코", f:"🇲🇽", lm:["🌵","🌮","🪅"],  sky:[35,85,80],  gr:[30,50,60] },
+  { n:"브라질", f:"🇧🇷", lm:["⚽","🦜","🌴"],  sky:[180,70,78], gr:[130,45,45] },
+  { n:"호주",   f:"🇦🇺", lm:["🦘","🐨","🏄"],  sky:[195,80,78], gr:[25,55,55] },
+  { n:"일본",   f:"🇯🇵", lm:["🗻","🌸","⛩️"],  sky:[340,50,86], gr:[100,30,55] },
+];
+const LAST = PLACES.length - 1;
+const TIME = 5;            // 연타 시간(초)
+const MAX_TAPS = 90;       // 5초에 90번(초당 18번, 사람이 낼 수 있는 최고 수준) = 일본 도착
+const placeOf = taps => PLACES[Math.min(LAST, Math.floor(Math.min(1, taps / MAX_TAPS) * LAST + 1e-9))].n;
+
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+const $ = id => document.getElementById(id);
+let W = 0, H = 0, dpr = 1, SW = 0;
+let state = "ready", taps = 0, tLeft = 0, flyT = 0, flyDur = 0, dist = 0, camX = 0, bird = { x:0, y:0, r:0 }, last = 0, landed = 0;
+
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  SW = Math.max(W, 420) * 1.1;          // 한 지역(나라/도시)의 가로 길이
+}
+addEventListener("resize", () => { resize(); buildRoute(); });
+function getBest() { try { return parseInt(localStorage.getItem("sling_best")) || 0; } catch (e) { return 0; } }
+function setBest(v) { try { localStorage.setItem("sling_best", v); } catch (e) {} }
+
+const GY = () => H * 0.78;                // 땅 높이
+const X0 = () => W * 0.22;                // 새총 위치
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = t => t * t * (3 - 2 * t);
+const hsl = (c, dl) => `hsl(${c[0]} ${c[1]}% ${Math.max(0, Math.min(100, c[2] + (dl || 0)))}%)`;
+function mixC(a, b, t) { let dh = b[0] - a[0]; if (dh > 180) dh -= 360; if (dh < -180) dh += 360; return [a[0] + dh * t, lerp(a[1], b[1], t), lerp(a[2], b[2], t)]; }
+
+// ---------- 아래 경로 막대 ----------
+function buildRoute() {
+  const tr = $("track");
+  tr.querySelectorAll(".stop,.lab,#me,#pb").forEach(e => e.remove());
+  PLACES.forEach((p, i) => {
+    const pc = i / LAST * 100;
+    const s = document.createElement("div"); s.className = "stop"; s.style.left = pc + "%"; s.id = "st" + i; tr.appendChild(s);
+    const l = document.createElement("div"); l.className = "lab " + (i % 2 ? "dn" : "up"); l.style.left = pc + "%"; l.textContent = p.n; l.id = "lb" + i; tr.appendChild(l);
+  });
+  const pb = document.createElement("div"); pb.id = "pb"; pb.textContent = "🏁"; tr.appendChild(pb);
+  const me = document.createElement("div"); me.id = "me"; me.textContent = "🐦"; tr.appendChild(me);
+  setMarker(0); showBest();
+}
+function setMarker(d) {                       // d: 0 ~ LAST (지역 단위 거리)
+  const pc = Math.min(1, d / LAST) * 100;
+  $("me").style.left = pc + "%"; $("fill").style.width = pc + "%";
+  const k = Math.min(LAST, Math.floor(d + 1e-9));
+  PLACES.forEach((_, i) => { $("st" + i).classList.toggle("on", i <= k); $("lb" + i).classList.toggle("on", i === k); });
+  $("where").textContent = PLACES[k].f + " " + PLACES[k].n;
+}
+function showBest() {
+  const b = getBest();
+  $("pb").style.display = b ? "block" : "none";
+  $("pb").style.left = Math.min(1, b / MAX_TAPS) * 100 + "%";
+  $("best").textContent = b ? "최고 " + placeOf(b) : "";
+}
+
+// ---------- 진행 ----------
+function start() {
+  if (document.activeElement) document.activeElement.blur();   // 스페이스가 버튼을 다시 누르지 않게
+  resize(); taps = 0; tLeft = TIME; state = "charge"; camX = 0; landed = 0;
+  bird = { x: X0(), y: GY() - 90, r: 18 };
+  $("ov").classList.add("hide"); $("tap").classList.remove("hide");
+  $("info").textContent = "연타 0"; setMarker(0);
+}
+function hit() {
+  if (state !== "charge") return;
+  taps++; $("info").textContent = "연타 " + taps;
+}
+function launch() {
+  state = "fly"; $("tap").classList.add("hide");
+  dist = Math.min(1, taps / MAX_TAPS) * LAST;                 // 몇 번째 지역까지 가는지 (소수)
+  flyDur = 2.2 + dist * 0.75;                                 // 멀리 갈수록 오래 날아감
+  flyT = 0;
+}
+function land() {
+  state = "over";
+  const b = getBest(), nb = taps > b;
+  if (nb) setBest(taps);
+  if (window.GL && taps > 0) GL.report("sling", taps);
+  const p = PLACES[Math.min(LAST, Math.floor(dist + 1e-9))];
+  $("ovt").textContent = nb ? "🎉 최고 기록!" : "도착!";
+  $("ovs").textContent = p.f + " " + p.n; $("ovs").classList.remove("hide");
+  $("ovp").textContent = "연타 " + taps + "번" + (dist >= LAST ? " · 끝까지 도착!" : "");
+  $("go").textContent = "다시 하기";
+  $("ov").classList.remove("hide");
+  showBest();
+}
+
+function update(dt) {
+  if (state === "charge") {
+    tLeft -= dt;
+    if (tLeft <= 0) launch();
+  } else if (state === "fly") {
+    flyT += dt;
+    const t = Math.min(1, flyT / flyDur);
+    const s = 1 - Math.pow(1 - t, 3);                          // 처음엔 빠르게, 끝에서 천천히
+    const D = dist * SW;
+    bird.x = X0() + s * D;
+    const alt = Math.min(H * 0.5, 60 + D * 0.04);
+    const arc = t < 0.85 ? Math.sin(Math.min(1, t / 0.85) * Math.PI * 0.5) : Math.cos((t - 0.85) / 0.15 * Math.PI * 0.5);
+    bird.y = GY() - 22 - alt * arc + Math.sin(flyT * 9) * 3 * (t < 0.9 ? 1 : 0);
+    setMarker(s * dist);
+    if (t >= 1) land();
+  }
+  const target = Math.max(0, bird.x - W * 0.35);
+  camX += (target - camX) * Math.min(1, 6 * dt);
+}
+
+function draw() {
+  const cx = camX + W / 2, fi = Math.max(0, Math.min(LAST, cx / SW - 0.5));
+  const i0 = Math.floor(fi), i1 = Math.min(LAST, i0 + 1), mt = smooth(fi - i0);
+  const sky = mixC(PLACES[i0].sky, PLACES[i1].sky, mt);
+  // 하늘
+  const g = ctx.createLinearGradient(0, 0, 0, GY());
+  g.addColorStop(0, hsl(sky, -8)); g.addColorStop(1, hsl(sky, 8));
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // 구름 (느린 시차)
+  ctx.fillStyle = "rgba(255,255,255,.7)";
+  for (let k = 0; k < 6; k++) {
+    const x = ((k * 260 - camX * 0.25) % (W + 300) + W + 300) % (W + 300) - 150, y = 40 + (k * 53) % (H * 0.3);
+    ctx.beginPath(); ctx.ellipse(x, y, 46, 16, 0, 0, 7); ctx.ellipse(x + 30, y - 8, 30, 14, 0, 0, 7); ctx.fill();
+  }
+  // 지역별 땅·먼 언덕·랜드마크·표지판
+  const first = Math.max(0, Math.floor(camX / SW) - 1), lastI = Math.min(LAST, Math.floor((camX + W) / SW) + 1);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  for (let i = first; i <= lastI; i++) {
+    const p = PLACES[i], x0 = i * SW - camX, x1 = x0 + SW;
+    ctx.fillStyle = hsl(p.gr, 12);                                      // 먼 언덕
+    ctx.beginPath(); ctx.moveTo(x0, GY());
+    for (let k = 0; k <= 8; k++) ctx.lineTo(x0 + SW * k / 8, GY() - 30 - 26 * Math.sin(k * 1.7 + i));
+    ctx.lineTo(x1, GY()); ctx.fill();
+    ctx.fillStyle = hsl(p.gr); ctx.fillRect(x0, GY(), SW + 1, H - GY());          // 땅
+    ctx.fillStyle = hsl(p.gr, -8); ctx.fillRect(x0, GY(), SW + 1, 6);
+    p.lm.forEach((e, k) => {                                            // 랜드마크
+      ctx.font = (k === 0 ? 64 : 40) + "px serif";
+      ctx.fillText(e, x0 + SW * (0.3 + k * 0.25), GY() - (k === 0 ? 34 : 22));
+    });
+    // 경계 표지판
+    const sx = x0 + 30;
+    ctx.fillStyle = "#6b4f2e"; ctx.fillRect(sx - 3, GY() - 70, 6, 70);
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.roundRect(sx - 52, GY() - 104, 104, 40, 8); ctx.fill();
+    ctx.fillStyle = "#222"; ctx.font = "800 16px 'Noto Sans KR',sans-serif"; ctx.fillText(p.f + " " + p.n, sx, GY() - 84);
+  }
+  // 새총
+  const sx = X0() - camX, sy = GY();
+  ctx.strokeStyle = "#7a4e25"; ctx.lineWidth = 10; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, sy - 60); ctx.moveTo(sx, sy - 60); ctx.lineTo(sx - 22, sy - 100); ctx.moveTo(sx, sy - 60); ctx.lineTo(sx + 22, sy - 100); ctx.stroke();
+  if (state === "charge" || state === "ready") {
+    const pull = state === "charge" ? Math.min(1, taps / MAX_TAPS) : 0;     // 연타할수록 고무줄이 당겨짐
+    const shake = state === "charge" ? Math.sin(performance.now() / 30) * 2 * pull : 0;
+    bird.x = X0() - 10 - pull * 70 + shake; bird.y = GY() - 92 + pull * 30;
+    ctx.strokeStyle = "#3b2416"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(sx - 22, sy - 100); ctx.lineTo(bird.x - camX, bird.y); ctx.lineTo(sx + 22, sy - 100); ctx.stroke();
+  }
+  drawBird(bird.x - camX, bird.y, state === "fly" ? Math.min(0.5, (bird.y - (GY() - 60)) / -200) : 0);
+  // 연타 중 남은 시간
+  if (state === "charge") {
+    ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(W * 0.2, 18, W * 0.6, 12);
+    ctx.fillStyle = "#fff"; ctx.fillRect(W * 0.2, 18, W * 0.6 * Math.max(0, tLeft / TIME), 12);
+    ctx.font = "900 64px 'Noto Sans KR',sans-serif"; ctx.fillStyle = "rgba(255,255,255,.95)";
+    ctx.fillText(taps, W / 2, H * 0.32);
+  }
+}
+
+function drawBird(x, y, tilt) {               // 화난 빨간 새
+  ctx.save(); ctx.translate(x, y); ctx.rotate(-tilt);
+  ctx.fillStyle = "rgba(0,0,0,.15)"; ctx.beginPath(); ctx.ellipse(0, GY() - y + 4, 16, 4, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = "#e5484d"; ctx.beginPath(); ctx.arc(0, 0, 18, 0, 7); ctx.fill();
+  ctx.fillStyle = "#f6d7b0"; ctx.beginPath(); ctx.ellipse(2, 9, 11, 7, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(5, -4, 5, 0, 7); ctx.arc(13, -4, 4.5, 0, 7); ctx.fill();
+  ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(6.5, -3.5, 2.2, 0, 7); ctx.arc(14, -3.5, 2, 0, 7); ctx.fill();
+  ctx.strokeStyle = "#111"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(1, -12); ctx.lineTo(10, -8); ctx.moveTo(18, -11); ctx.lineTo(11, -8); ctx.stroke();
+  ctx.fillStyle = "#f5a524"; ctx.beginPath(); ctx.moveTo(16, 2); ctx.lineTo(28, 5); ctx.lineTo(16, 9); ctx.fill();
+  ctx.fillStyle = "#b8282e"; ctx.beginPath(); ctx.moveTo(-17, -4); ctx.lineTo(-27, -10); ctx.lineTo(-25, 2); ctx.fill();
+  ctx.restore();
+}
+
+function loop(t) {
+  const dt = Math.min(0.05, (t - last) / 1000); last = t;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+
+addEventListener("keydown", e => {
+  if (e.code !== "Space") return;
+  e.preventDefault();
+  if (e.repeat) return;                       // 꾹 누르기(자동 반복)는 1번만 인정
+  if (state === "charge") hit();
+  else if (state !== "fly") start();
+});
+$("tap").addEventListener("pointerdown", e => { e.preventDefault(); hit(); });
+$("go").onclick = start;
+resize(); buildRoute();
+bird = { x: X0(), y: GY() - 92, r: 18 };
+requestAnimationFrame(t => { last = t; loop(t); });
+</script>
+<script>window.GL_GAMES = [{ key:"sling", label:"새총 연타", dir:"desc", fmt:d => placeOf(d.value) + " · " + d.value + "번" }];</script>
+<script type="module" src="gl.js"></script>
+</body>
+</html>

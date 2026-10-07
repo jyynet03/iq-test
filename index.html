@@ -20,7 +20,7 @@
   h2 { font-size:18px; font-weight:800; margin:6px 2px 14px; }
   .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
   @media (min-width:640px) { .grid { grid-template-columns:repeat(3,1fr); } }
-  @media (min-width:960px) { .grid { grid-template-columns:repeat(6,1fr); } }
+  @media (min-width:960px) { .grid { grid-template-columns:repeat(7,1fr); } }
   .tile { display:block; text-decoration:none; color:var(--txt); }
   .cover { aspect-ratio:1; border-radius:14px; overflow:hidden; box-shadow:0 10px 24px rgba(0,0,0,.4);
     transition:transform .15s, box-shadow .15s; }
@@ -45,6 +45,7 @@
     <a class="tile" href="tower.html"><div class="cover" data-art="tower"></div><b>블록 탑쌓기</b><small>액션</small></a>
     <a class="tile" href="ball.html"><div class="cover" data-art="ball"></div><b>공 맞추기</b><small>액션</small></a>
     <a class="tile" href="cat.html"><div class="cover" data-art="cat"></div><b>고양이 밥주기</b><small>시뮬레이션</small></a>
+    <a class="tile" href="sling.html"><div class="cover" data-art="sling"></div><b>새총 연타</b><small>연타</small></a>
   </div>
   <div class="wide">
     <a class="tile" href="ranking.html"><div class="cover" data-art="rank"></div><b>총 랭킹</b></a>
@@ -120,6 +121,15 @@ const ART = {
       g += `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#spb)"/>`;
     }
     return frame("b", H, g);
+  },
+  sling: () => {
+    const H = 200; let g = `<rect y="128" width="160" height="32" fill="${hsl(110, 30, 62)}"/>` + shadow(46, 130, 22, 5);
+    g += `<path d="M46 130 V96 M46 96 L32 70 M46 96 L60 70" stroke="#8a5a2e" stroke-width="8" stroke-linecap="round" fill="none"/>`;
+    g += `<path d="M110 40 q-30 -20 -70 10" stroke="#fff" stroke-width="3" stroke-dasharray="3 6" fill="none" opacity=".8"/>`;
+    g += `<g transform="translate(118 46) rotate(-15)"><circle r="17" fill="#e5484d"/><ellipse cx="2" cy="8" rx="10" ry="6" fill="#f6d7b0"/>` +
+         `<circle cx="5" cy="-4" r="4.5" fill="#fff"/><circle cx="12" cy="-4" r="4" fill="#fff"/><circle cx="6" cy="-3.5" r="2" fill="#111"/><circle cx="13" cy="-3.5" r="1.8" fill="#111"/>` +
+         `<path d="M1 -11 L9 -7 M17 -10 L10 -7" stroke="#111" stroke-width="2.5"/><path d="M15 2 L26 5 L15 8 z" fill="#f5a524"/></g>`;
+    return frame("s", H, g);
   },
   cat: () => {
     const H = 42; let g = shadow(80, 140, 50, 12);
