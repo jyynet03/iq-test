@@ -156,6 +156,7 @@ function finish() {
   $("detail").textContent = t[2];
   $("stat").textContent = `정답 ${correct} / ${QUESTIONS.length} · 소요 시간 ${fmt(sec)}`;
   show("end");
+  if (window.GL) GL.report("iq", correct * 1000 - Math.min(sec, 999), { iq, correct, sec });
 }
 
 $("start").onclick = start;
@@ -169,5 +170,7 @@ $("share").onclick = async () => {
   } catch (e) {}
 };
 </script>
+<script>window.GL_GAMES = [{ key:"iq", label:"IQ 테스트", dir:"desc", fmt:d => `${d.iq}점 · 정답 ${d.correct}/20 · ${d.sec}초` }];</script>
+<script type="module" src="gl.js"></script>
 </body>
 </html>

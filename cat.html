@@ -141,6 +141,7 @@ function end() {
   state = "over"; clearInterval(timer);
   const b = getBest(), nb = score > b;
   if (nb) setBest(score);
+  if (window.GL && score > 0) GL.report("cat", score);
   $("ovt").textContent = nb ? "🎉 최고 기록!" : "고양이들이 떠났어요 😿";
   $("ovs").textContent = score + "점";
   $("ovs").classList.remove("hide");
@@ -183,5 +184,7 @@ $("go").onclick = start;
 $("best").textContent = getBest() ? "최고 " + getBest() : "";
 renderSel(); hud();
 </script>
+<script>window.GL_GAMES = [{ key:"cat", label:"고양이 밥주기", dir:"desc", fmt:d => d.value + "점" }];</script>
+<script type="module" src="gl.js"></script>
 </body>
 </html>

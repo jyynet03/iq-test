@@ -112,6 +112,7 @@ function over() {
   state = "over";
   const n = layers.length - 1, b = getBest(), nb = n > b;
   if (nb) setBest(n);
+  if (window.GL && n > 0) GL.report("tower", n);
   $("ovt").textContent = nb ? "🎉 최고 기록!" : "💥 무너졌다!";
   $("ovs").textContent = n + "층";
   $("ovs").classList.remove("hide");
@@ -183,5 +184,7 @@ $("best").textContent = getBest() ? "최고 " + getBest() + "층" : "";
 resize();
 requestAnimationFrame(t => { last = t; loop(t); });
 </script>
+<script>window.GL_GAMES = [{ key:"tower", label:"블록 탑쌓기", dir:"desc", fmt:d => d.value + "층" }];</script>
+<script type="module" src="gl.js"></script>
 </body>
 </html>

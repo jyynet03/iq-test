@@ -80,6 +80,7 @@ function over() {
   state = "over";
   const m = Math.floor(dist), b = getBest(), nb = m > b;
   if (nb) setBest(m);
+  if (window.GL && m > 0) GL.report("race", m);
   $("ovt").textContent = nb ? "🎉 최고 기록!" : "💥 충돌!";
   $("ovs").textContent = m + " m";
   $("ovs").classList.remove("hide");
@@ -204,5 +205,7 @@ $("go").onclick = start;
 $("best").textContent = getBest() ? "최고 " + getBest() + " m" : "";
 resize(); reset(); draw();
 </script>
+<script>window.GL_GAMES = [{ key:"race", label:"경마 레이싱", dir:"desc", fmt:d => d.value + " m" }];</script>
+<script type="module" src="gl.js"></script>
 </body>
 </html>
