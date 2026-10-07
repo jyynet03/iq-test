@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>공 맞추기</title>
+<title>고양이 잡기</title>
 <style>
   :root { --bg:#12121a; --fg:#fff; --acc:#f59e0b; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -31,9 +31,9 @@
   <div id="wrap">
     <canvas id="c"></canvas>
     <div id="ov">
-      <h1 id="ovt">⚽ 공 맞추기</h1>
+      <h1 id="ovt">🐱 고양이 잡기</h1>
       <div class="big hide" id="ovs"></div>
-      <p id="ovp">공을 터치! 💣는 누르지 마세요</p>
+      <p id="ovp">날아오는 고양이를 터치! 💣는 누르지 마세요</p>
       <button class="btn" id="go">시작</button>
     </div>
   </div>
@@ -42,7 +42,7 @@
 <script>
 const cv = document.getElementById("c"), ctx = cv.getContext("2d");
 const $ = id => document.getElementById(id);
-const BALLS = ["⚽","🏀","⚾","🎾","🏐","🏈"];
+const BALLS = ["🐱","😺","😸","😻","🙀","😼","🐈"];
 let W = 0, H = 0, dpr = 1;
 let state = "ready", balls = [], fx = [], score = 0, lives = 5, spawnT = 0, elapsed = 0, last = 0, floaters = [];
 const LIVES = 5;
@@ -208,7 +208,7 @@ $("best").textContent = getBest() ? "최고 " + getBest() : "";
 resize();
 requestAnimationFrame(t => { last = t; loop(t); });
 </script>
-<script>window.GL_GAMES = [{ key:"ball", label:"공 맞추기", dir:"desc", fmt:d => d.value + "점" }];</script>
+<script>window.GL_GAMES = [{ key:"ball", label:"고양이 잡기", dir:"desc", fmt:d => d.value + "점" }];</script>
 <script type="module" src="gl.js"></script>
 </body>
 </html>

@@ -37,14 +37,15 @@
 import { firebaseConfig } from "./firebase-config.js";
 const BOARDS = [
   { key:"iq",            label:"IQ",       dir:"desc" },
-  { key:"cherry_easy",   label:"체리(쉬움)", dir:"asc" },
-  { key:"cherry_normal", label:"체리(보통)", dir:"asc" },
-  { key:"cherry_hard",   label:"체리(어려움)", dir:"asc" },
-  { key:"race",          label:"경마",     dir:"desc" },
-  { key:"tower",         label:"탑쌓기",   dir:"desc" },
-  { key:"ball",          label:"공",       dir:"desc" },
+  { key:"cherry_easy",   label:"고양이찾기(쉬움)", dir:"asc" },
+  { key:"cherry_normal", label:"고양이찾기(보통)", dir:"asc" },
+  { key:"cherry_hard",   label:"고양이찾기(어려움)", dir:"asc" },
+  { key:"race",          label:"레이싱",     dir:"desc" },
+  { key:"tower",         label:"고양이쌓기",   dir:"desc" },
+  { key:"ball",          label:"고양이잡기",       dir:"desc" },
   { key:"cat",           label:"고양이",   dir:"desc" },
-  { key:"sling",         label:"새총",     dir:"desc" },
+  { key:"sling",         label:"날아라고양이",     dir:"desc" },
+  { key:"aeong",         label:"이구동성", dir:"desc" },
 ];
 const TOP = 10;                               // 등수 점수: 1등 10점 … 10등 1점
 const list = document.getElementById("list");
@@ -60,11 +61,13 @@ try {
   await Promise.all(BOARDS.map(async b => {
     try {
       const snap = await getDocs(query(collection(db, "rank_" + b.key), orderBy("value", b.dir), limit(TOP)));
-      let i = 0;
+      let i = 0, rank = 0, prev = null;
       snap.forEach(d => {
-        const v = d.data(), pt = TOP - i, u = total[v.uid] || (total[v.uid] = { nick: v.nick, pt: 0, firsts: 0, parts: [] });
-        u.pt += pt; if (i === 0) u.firsts++;
-        u.parts.push(`${b.label} ${i + 1}등(+${pt})`);
+        const v = d.data();
+        if (v.value !== prev) { rank = i; prev = v.value; }      // 같은 기록이면 같은 등수 (공동 1등 등)
+        const pt = TOP - rank, u = total[v.uid] || (total[v.uid] = { nick: v.nick, pt: 0, firsts: 0, parts: [] });
+        u.pt += pt; if (rank === 0) u.firsts++;
+        u.parts.push(`${b.label} ${rank + 1}등(+${pt})`);
         i++;
       });
     } catch (e) { /* 아직 기록 없는 게임은 건너뜀 */ }

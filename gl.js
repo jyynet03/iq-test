@@ -162,11 +162,12 @@ async function init() {
       const snap = await getDocs(query(collection(db, "rank_" + tab), orderBy("value", cfg.dir), limit(20)));
       list.textContent = "";
       if (snap.empty) list.appendChild(el("li", {}, "아직 기록이 없어요. 첫 번째 주인공이 되어보세요!"));
-      let i = 0;
+      let i = 0, rank = 0, prev = null;
       snap.forEach(d => {
         const v = d.data(); i++;
+        if (v.value !== prev) { rank = i; prev = v.value; }        // 같은 기록이면 같은 등수
         const li = el("li", { className: me && v.uid === me.uid ? "me" : "" });
-        li.append(el("span", { className: "n" }, i <= 3 ? ["🥇", "🥈", "🥉"][i - 1] : String(i)),
+        li.append(el("span", { className: "n" }, rank <= 3 ? ["🥇", "🥈", "🥉"][rank - 1] : String(rank)),
           el("span", { className: "nm" }, v.nick), el("span", { className: "v" }, cfg.fmt(v)));
         list.appendChild(li);
       });

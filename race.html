@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>경마 레이싱</title>
+<title>고양이 레이싱</title>
 <style>
   :root { --bg:#12121a; --fg:#fff; --acc:#22c55e; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -31,7 +31,7 @@
   <div id="wrap">
     <canvas id="c"></canvas>
     <div id="ov">
-      <h1 id="ovt">🐎 경마 레이싱</h1>
+      <h1 id="ovt">🏎️ 고양이 레이싱</h1>
       <div class="big hide" id="ovs"></div>
       <p id="ovp">← → 또는 터치로 피하기</p>
       <button class="btn" id="go">시작</button>
@@ -173,7 +173,7 @@ function draw() {
   ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.beginPath(); ctx.ellipse(pxs, pys, psz * 0.5, psz * 0.13, 0, 0, 7); ctx.fill();
   const bob = Math.sin(phase * 5) * 4 * ps;
   ctx.save(); ctx.translate(pxs, pys - psz * 0.42 + bob); ctx.rotate(tilt);
-  ctx.font = psz + "px serif"; ctx.fillText("🏇", 0, 0); ctx.restore();
+  ctx.font = psz + "px serif"; ctx.fillText("🚗", 0, psz * 0.12); ctx.font = (psz * 0.55) + "px serif"; ctx.fillText("🐱", -psz * 0.08, -psz * 0.28); ctx.restore();   // 자동차에 탄 고양이
 
   // 속도감 (가장자리 어둡게)
   const vg = ctx.createRadialGradient(W / 2, H * 0.6, H * 0.3, W / 2, H * 0.6, H * 0.85);
@@ -206,7 +206,7 @@ $("go").onclick = start;
 $("best").textContent = getBest() ? "최고 " + getBest() + " m" : "";
 resize(); reset(); draw();
 </script>
-<script>window.GL_GAMES = [{ key:"race", label:"경마 레이싱", dir:"desc", fmt:d => d.value + " m" }];</script>
+<script>window.GL_GAMES = [{ key:"race", label:"고양이 레이싱", dir:"desc", fmt:d => d.value + " m" }];</script>
 <script type="module" src="gl.js"></script>
 </body>
 </html>

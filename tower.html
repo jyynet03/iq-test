@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>블록 탑쌓기</title>
+<title>고양이 쌓기</title>
 <style>
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html, body { margin:0; height:100%; overflow:hidden; overscroll-behavior:none; }
@@ -28,7 +28,7 @@
   <div id="wrap">
     <canvas id="c"></canvas>
     <div id="ov">
-      <h1 id="ovt">블록 탑쌓기</h1>
+      <h1 id="ovt">🐱 고양이 쌓기</h1>
       <div class="big hide" id="ovs"></div>
       <p id="ovp">터치(스페이스)로 쌓기</p>
       <button class="btn" id="go">시작</button>
@@ -40,8 +40,8 @@
 // 3D 아이소메트릭 탑쌓기: 블록이 x축 → z축 번갈아 미끄러지고, y축으로 쌓인다
 const cv = document.getElementById("c"), ctx = cv.getContext("2d");
 const $ = id => document.getElementById(id);
-const HUE = 222;                     // 파스텔 단색 계열 (블루)
-const SIZE = 10, SLAB = 1;           // 바닥 블록 크기, 한 층 두께
+const HUE = 28;                      // 파스텔 단색 계열 (치즈냥 크림색)
+const SIZE = 10, SLAB = 1.8;           // 바닥 블록 크기, 한 층 두께
 let W = 0, H = 0, dpr = 1, U = 16;
 let state = "ready", layers, cur, axis, dir, fall, cam, camT, combo, flash, last = 0;
 
@@ -64,11 +64,39 @@ const col = (i, dl) => `hsl(${HUE + i * 1.5} ${42 - Math.min(i, 20) * .6}% ${Mat
 function drawBox(b, i, alpha) {
   const { x0, x1, z0, z1, y } = b, y1 = y + SLAB;
   const P = (x, z, yy) => [sx(x, z), sy(x, z, yy)];
-  const face = (pts, c) => { ctx.beginPath(); ctx.moveTo(...pts[0]); for (const p of pts.slice(1)) ctx.lineTo(...p); ctx.closePath(); ctx.fillStyle = c; ctx.fill(); };
+  // 같은 색 두꺼운 둥근 테두리로 모서리를 둥글게 → 둥글 네모한 고양이 몸통
+  const face = (pts, c) => { ctx.beginPath(); ctx.moveTo(...pts[0]); for (const p of pts.slice(1)) ctx.lineTo(...p); ctx.closePath();
+    ctx.fillStyle = c; ctx.fill(); ctx.strokeStyle = c; ctx.lineWidth = U * 0.35; ctx.lineJoin = "round"; ctx.stroke(); };
+  const dot = (p, r, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(p[0], p[1], r, 0, 7); ctx.fill(); };
+  const w = x1 - x0, xm = (x0 + x1) / 2;
   ctx.globalAlpha = alpha == null ? 1 : alpha;
+  // 귀 (앞쪽 윗모서리 위로) — 위층이 쌓이면 가려지고 맨 위 고양이만 귀가 보임
+  if (w > 1.2) for (const ex of [x0 + w * 0.22, x1 - w * 0.22]) {
+    const ew = Math.min(1.1, w * 0.18);
+    face([P(ex - ew, z1, y1), P(ex + ew, z1, y1), P(ex, z1, y1 + SLAB * 0.55)], col(i, -4));
+    face([P(ex - ew * .45, z1, y1), P(ex + ew * .45, z1, y1), P(ex, z1, y1 + SLAB * 0.32)], "hsl(350 60% 85%)");
+  }
   face([P(x1, z0, y1), P(x1, z1, y1), P(x1, z1, y), P(x1, z0, y)], col(i, -8));    // 오른쪽 면 (x축 끝)
-  face([P(x0, z1, y1), P(x1, z1, y1), P(x1, z1, y), P(x0, z1, y)], col(i, -20));   // 왼쪽 면 (z축 끝)
+  face([P(x0, z1, y1), P(x1, z1, y1), P(x1, z1, y), P(x0, z1, y)], col(i, -2));    // 앞면 = 고양이 얼굴
   face([P(x0, z0, y1), P(x1, z0, y1), P(x1, z1, y1), P(x0, z1, y1)], col(i, 10));  // 윗면
+  if (w > 0.8) {                                                                    // 얼굴: 눈, 코, 입, 수염
+    const r = Math.min(U * 0.28, w * U * 0.06);
+    const eL = P(xm - Math.min(1.6, w * 0.18), z1, y + SLAB * 0.58), eR = P(xm + Math.min(1.6, w * 0.18), z1, y + SLAB * 0.58);
+    dot(eL, r, "#2b2b33"); dot(eR, r, "#2b2b33");
+    dot([eL[0] + r * .35, eL[1] - r * .35], r * .35, "#fff"); dot([eR[0] + r * .35, eR[1] - r * .35], r * .35, "#fff");
+    const n = P(xm, z1, y + SLAB * 0.38);
+    dot(n, r * 0.55, "hsl(350 55% 72%)");
+    ctx.strokeStyle = "#2b2b33"; ctx.lineWidth = Math.max(1, r * 0.3); ctx.lineCap = "round";
+    ctx.beginPath(); ctx.arc(n[0] - r * .6, n[1] + r * .4, r * .6, 0, Math.PI); ctx.arc(n[0] + r * .6, n[1] + r * .4, r * .6, 0, Math.PI); ctx.stroke();
+    if (w > 3) {
+      ctx.globalAlpha *= 0.6; ctx.beginPath();
+      for (const s of [-1, 1]) for (const k of [-1, 1]) {
+        const a = P(xm + s * w * 0.2, z1, y + SLAB * (0.36 + k * 0.06)), b2 = P(xm + s * w * 0.36, z1, y + SLAB * (0.36 + k * 0.12));
+        ctx.moveTo(a[0], a[1]); ctx.lineTo(b2[0], b2[1]);
+      }
+      ctx.stroke(); ctx.globalAlpha = alpha == null ? 1 : alpha;
+    }
+  }
   ctx.globalAlpha = 1;
 }
 
@@ -117,7 +145,7 @@ function over() {
   const n = layers.length - 1, b = getBest(), nb = n > b;
   if (nb) setBest(n);
   if (window.GL && n > 0) GL.report("tower", n);
-  $("ovt").textContent = nb ? "🎉 최고 기록!" : "무너졌다!";
+  $("ovt").textContent = nb ? "🎉 최고 기록!" : "냥탑이 무너졌다!";
   $("ovs").textContent = n; $("ovs").classList.remove("hide");
   $("ovp").textContent = nb ? "" : "최고 " + b;
   $("go").textContent = "다시 하기";
@@ -164,12 +192,12 @@ function loop(t) {
 cv.addEventListener("pointerdown", e => { e.preventDefault(); drop(); });
 addEventListener("keydown", e => { if (e.code === "Space") { e.preventDefault(); state === "play" ? drop() : start(); } });
 $("go").onclick = start;
-$("best").textContent = getBest() ? "최고 " + getBest() + "층" : "";
+$("best").textContent = getBest() ? "최고 " + getBest() + "마리" : "";
 resize();
 { const h = SIZE / 2; layers = [{ x0: -h, x1: h, z0: -h, z1: h, y: 0 }]; cam = 0; camT = 0; fall = []; flash = 0; cur = null; }
 requestAnimationFrame(t => { last = t; loop(t); });
 </script>
-<script>window.GL_GAMES = [{ key:"tower", label:"블록 탑쌓기", dir:"desc", fmt:d => d.value + "층" }];</script>
+<script>window.GL_GAMES = [{ key:"tower", label:"고양이 쌓기", dir:"desc", fmt:d => d.value + "마리" }];</script>
 <script type="module" src="gl.js"></script>
 </body>
 </html>
