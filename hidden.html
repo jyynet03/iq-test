@@ -21,7 +21,7 @@
   .lv .btn small { display:block; font-weight:400; font-size:12px; opacity:.75; }
   .top { display:flex; justify-content:space-between; align-items:center; font-size:15px; font-weight:700; }
   #pen { color:#ef4444; font-size:13px; min-width:60px; text-align:right; }
-  .targets { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; background:var(--card); border-radius:14px; padding:10px; }
+  .targets { display:flex; gap:10px; justify-content:center; align-items:center; background:var(--card); border-radius:14px; padding:10px; font-size:15px; }
   .t { font-size:30px; line-height:1; padding:4px 8px; border-radius:10px; background:#2a2a3c; transition:.2s; }
   .t.done { opacity:.25; filter:grayscale(1); text-decoration:line-through; }
   #field { position:relative; width:100%; height:62dvh; min-height:360px; background:#f7f2e7; border-radius:16px; overflow:hidden; touch-action:manipulation; }
@@ -40,7 +40,7 @@
   <h1>🔍 숨은그림찾기</h1>
 
   <section id="menu" class="card">
-    <p>흩어진 이모지 사이에서 위쪽에 표시된 목표물을 모두 찾아 터치하세요. 엉뚱한 곳을 누르면 <b>+3초</b> 벌칙이 붙어요.</p>
+    <p>같은 색깔의 비슷한 이모지들 사이에 숨은 목표 그림(예: 딸기)을 개수만큼 모두 찾아 터치하세요. 엉뚱한 곳을 누르면 <b>+3초</b> 벌칙이 붙어요.</p>
     <div class="lv" id="lv"></div>
     <p class="muted" style="margin-top:14px">내 단계별 최고 기록은 이 기기에만 저장됩니다. 개인정보는 수집하지 않습니다.</p>
   </section>
@@ -61,12 +61,19 @@
 
 <script>
 const LEVELS = {
-  easy:   { name:"쉬움",   targets:4, decoys:50,  size:34, desc:"목표 4개 · 큰 그림" },
-  normal: { name:"보통",   targets:5, decoys:110, size:28, desc:"목표 5개 · 빽빽한 장면" },
-  hard:   { name:"어려움", targets:6, decoys:200, size:22, desc:"목표 6개 · 아주 작고 빽빽함" },
+  easy:   { name:"쉬움",   targets:6,  decoys:60,  size:34, desc:"6개 찾기 · 큰 그림" },
+  normal: { name:"보통",   targets:8,  decoys:120, size:28, desc:"8개 찾기 · 빽빽한 장면" },
+  hard:   { name:"어려움", targets:10, decoys:200, size:22, desc:"10개 찾기 · 아주 작고 빽빽함" },
 };
-const TARGET_POOL = ["🍓","🎈","🔑","⭐","🎁","🐞","🍄","🎸","🚀","🧸","🍩","🔔"];
-const DECOY_POOL = ["🍎","🍌","🍇","🍉","🍒","🍑","🥝","🍋","🍅","🌽","🥕","🍔","🌸","🌻","🌲","🌵","🐶","🐱","🐭","🐰","🦊","🐻","🐼","🐸","🐝","🦋","🐢","🐙","⚽","🏀","🎲","🎯","🎨","📚","✏️","💡","🔧","🧲","🕐","☂️","👟","🧦","👑","💎","🍕","🌙","☁️","🔥"];
+// 같은 색 계열 이모지 사이에서 target 하나만 찾는다
+const THEMES = [
+  { color:"빨간", target:"🍓", name:"딸기",   decoys:["🍎","🍒","🍅","🌶️","🌹","❤️","🍉","🦞","🚗","🧧","🎈","🍄"] },
+  { color:"노란", target:"🍌", name:"바나나", decoys:["🍋","🌽","🌻","⭐","🐥","🧀","🍯","🌕","🐝","🍍","🧽","🔆"] },
+  { color:"초록", target:"🥝", name:"키위",   decoys:["🥒","🥬","🥦","🐸","🍏","🌿","🐢","🌵","🍀","🦖","🫑","🐊"] },
+  { color:"주황", target:"🍊", name:"귤",     decoys:["🥕","🎃","🦊","🍑","🏀","🍁","🧡","🐯","🥭","🦁","🔶","🏵️"] },
+  { color:"보라", target:"🍇", name:"포도",   decoys:["🍆","🔮","☂️","👾","🦄","💜","🟣","🪻","😈","🍬","🧿","🫐"] },
+  { color:"파란", target:"🫐", name:"블루베리", decoys:["🐳","🧢","💙","🦋","🔵","🌀","🧿","🐬","🪣","🌊","🥶","🧊"] },
+];
 
 const $ = id => document.getElementById(id);
 let level = "easy", found = 0, total = 0, start = 0, tick = null, penalty = 0, over = false;
@@ -102,13 +109,13 @@ function begin(lv) {
   $("lvname").textContent = L.name;
   show("play");
 
-  const targets = shuffle(TARGET_POOL.slice()).slice(0, L.targets);
-  const decoyPool = DECOY_POOL;
-  const items = targets.map(t => ({ e:t, t:true }));
-  for (let i = 0; i < L.decoys; i++) items.push({ e: decoyPool[Math.floor(Math.random()*decoyPool.length)], t:false });
+  const th = THEMES[Math.floor(Math.random() * THEMES.length)];
+  const items = [];
+  for (let i = 0; i < L.targets; i++) items.push({ e:th.target, t:true });
+  for (let i = 0; i < L.decoys; i++) items.push({ e: th.decoys[Math.floor(Math.random()*th.decoys.length)], t:false });
   shuffle(items);
 
-  $("targets").innerHTML = targets.map(t => `<span class="t" data-e="${t}">${t}</span>`).join("");
+  $("targets").innerHTML = `<span class="t">${th.target}</span><span>${th.color} 이모지 속 <b>${th.name}</b> <b id="left">${L.targets}</b>개를 찾아라!</span>`;
 
   const field = $("field");
   field.innerHTML = "";
@@ -142,8 +149,8 @@ $("field").addEventListener("click", e => {
   const el = e.target.closest("span");
   if (el && el.dataset.t && !el.classList.contains("found")) {
     el.classList.add("found");
-    document.querySelectorAll(".t").forEach(t => { if (t.dataset.e === el.dataset.t) t.classList.add("done"); });
-    if (++found === total) finish();
+    $("left").textContent = total - ++found;
+    if (found === total) finish();
   } else if (!el || !el.dataset.t) {
     penalty += 3;
     $("pen").textContent = "+" + penalty + "초";

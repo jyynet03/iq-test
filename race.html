@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>경마 레이싱</title>
+<style>
+  :root { --bg:#12121a; --card:#1e1e2b; --fg:#fff; --acc:#22c55e; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); overflow:hidden; overscroll-behavior:none;
+    font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif; }
+  #app { height:100dvh; max-width:480px; margin:0 auto; padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+  a.back { color:#fff; opacity:.6; text-decoration:none; font-size:14px; }
+  .top { display:flex; justify-content:space-between; font-weight:700; font-size:16px; }
+  #wrap { position:relative; flex:1; min-height:0; }
+  canvas { width:100%; height:100%; display:block; border-radius:16px; touch-action:none; background:#2b2b35; }
+  #ov { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+    background:rgba(0,0,0,.6); border-radius:16px; text-align:center; padding:20px; }
+  #ov h1 { margin:0; font-size:28px; }
+  #ov p { margin:0; line-height:1.6; opacity:.85; font-size:15px; }
+  #ov .big { font-size:48px; font-weight:800; color:var(--acc); }
+  .btn { border:0; border-radius:14px; padding:14px 30px; font-size:18px; font-weight:700; background:var(--acc); color:#12121a; cursor:pointer; margin-top:6px; }
+  .hide { display:none !important; }
+</style>
+</head>
+<body>
+<div id="app">
+  <a class="back" href="index.html">← 게임 모음</a>
+  <div class="top"><span id="score">0 m</span><span id="best"></span></div>
+  <div id="wrap">
+    <canvas id="c"></canvas>
+    <div id="ov">
+      <h1 id="ovt">🐎 경마 레이싱</h1>
+      <div class="big hide" id="ovs"></div>
+      <p id="ovp">화면을 좌우로 터치하거나 드래그해서 말을 움직이세요.<br>(PC: ← → 키)<br>다른 동물들을 피하며 최대한 멀리 달리세요!</p>
+      <button class="btn" id="go">시작</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+const $ = id => document.getElementById(id);
+let W = 0, H = 0, dpr = 1;
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+addEventListener("resize", resize);
+
+function getBest() { try { return parseInt(localStorage.getItem("race_best")) || 0; } catch (e) { return 0; } }
+function setBest(v) { try { localStorage.setItem("race_best", v); } catch (e) {} }
+
+const ENEMIES = ["🐎","🐎","🦓","🦄","🐂","🐘"];
+let state = "ready", player, enemies, dist, speed, lineOff, spawnT, targetX, keys = {}, last = 0;
+
+function reset() {
+  resize();
+  player = { x: W / 2, y: H - 90, s: 44 };
+  targetX = player.x;
+  enemies = []; dist = 0; speed = 260; lineOff = 0; spawnT = 0;
+}
+
+function start() {
+  reset(); state = "play";
+  $("ov").classList.add("hide");
+  last = performance.now();
+  requestAnimationFrame(loop);
+}
+
+function over() {
+  state = "over";
+  const m = Math.floor(dist);
+  const b = getBest(), nb = m > b;
+  if (nb) setBest(m);
+  $("ovt").textContent = nb ? "🎉 최고 기록!" : "💥 충돌!";
+  $("ovs").textContent = m + " m";
+  $("ovs").classList.remove("hide");
+  $("ovp").textContent = nb ? "새로운 기록을 세웠어요!" : "내 최고 기록 " + b + " m";
+  $("go").textContent = "다시 하기";
+  $("ov").classList.remove("hide");
+  $("best").textContent = "최고 " + Math.max(b, m) + " m";
+}
+
+function loop(t) {
+  if (state !== "play") return;
+  const dt = Math.min(0.05, (t - last) / 1000); last = t;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+
+function update(dt) {
+  speed += 8 * dt;                       // 점점 빨라짐
+  dist += speed * dt / 12;
+  lineOff = (lineOff + speed * dt) % 60;
+
+  if (keys.ArrowLeft) targetX -= 420 * dt;
+  if (keys.ArrowRight) targetX += 420 * dt;
+  const m = 40;
+  targetX = Math.max(m, Math.min(W - m, targetX));
+  player.x += (targetX - player.x) * Math.min(1, 14 * dt);
+
+  spawnT -= dt;
+  if (spawnT <= 0) {
+    const lanes = 4, lw = (W - 40) / lanes;
+    const lane = Math.floor(Math.random() * lanes);
+    enemies.push({ x: 20 + lw * (lane + 0.5) + (Math.random() - 0.5) * lw * 0.3, y: -50,
+      e: ENEMIES[Math.floor(Math.random() * ENEMIES.length)], v: 0.45 + Math.random() * 0.3 });
+    spawnT = Math.max(0.35, 0.95 - speed / 1500) * (0.7 + Math.random() * 0.6);
+  }
+  for (const e of enemies) e.y += speed * e.v * dt + speed * 0.5 * dt;
+  enemies = enemies.filter(e => e.y < H + 60);
+
+  // 충돌 (조금 작은 판정)
+  for (const e of enemies) {
+    if (Math.abs(e.x - player.x) < 30 && Math.abs(e.y - player.y) < 38) return over();
+  }
+  $("score").textContent = Math.floor(dist) + " m";
+}
+
+function draw() {
+  ctx.fillStyle = "#2b2b35"; ctx.fillRect(0, 0, W, H);
+  // 도로 가장자리
+  ctx.fillStyle = "#fff"; ctx.fillRect(8, 0, 4, H); ctx.fillRect(W - 12, 0, 4, H);
+  // 차선
+  ctx.fillStyle = "#e5e5e5";
+  const lanes = 4, lw = (W - 40) / lanes;
+  for (let i = 1; i < lanes; i++) {
+    const x = 20 + lw * i - 2;
+    for (let y = -60 + lineOff; y < H; y += 60) ctx.fillRect(x, y, 4, 30);
+  }
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.font = "40px serif";
+  for (const e of enemies) {
+    ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(-Math.PI / 2); ctx.fillText(e.e, 0, 0); ctx.restore();
+  }
+  ctx.font = "46px serif";
+  ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(Math.PI / 2); ctx.fillText("🐎", 0, 0); ctx.restore();
+}
+
+// 입력: 터치/드래그/마우스
+function pointerX(e) {
+  const r = cv.getBoundingClientRect();
+  targetX = e.clientX - r.left;
+}
+cv.addEventListener("pointerdown", e => { cv.setPointerCapture(e.pointerId); pointerX(e); });
+cv.addEventListener("pointermove", e => { if (e.buttons || e.pointerType === "touch") pointerX(e); });
+addEventListener("keydown", e => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { keys[e.key] = true; e.preventDefault(); } });
+addEventListener("keyup", e => { keys[e.key] = false; });
+
+$("go").onclick = start;
+$("best").textContent = getBest() ? "최고 " + getBest() + " m" : "";
+resize();
+</script>
+</body>
+</html>
