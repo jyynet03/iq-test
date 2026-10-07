@@ -25,8 +25,7 @@
   .t { font-size:30px; line-height:1; padding:4px 8px; border-radius:10px; background:#2a2a3c; transition:.2s; }
   .t.done { opacity:.25; filter:grayscale(1); text-decoration:line-through; }
   #field { position:relative; width:100%; height:62dvh; min-height:360px; background:#f7f2e7; border-radius:16px; overflow:hidden; touch-action:manipulation; }
-  #field span { position:absolute; line-height:1; user-select:none; -webkit-user-select:none; transform:translate(-50%,-50%); }
-  #field span.found { outline:3px solid #22c55e; border-radius:50%; background:rgba(34,197,94,.25); }
+  #field canvas { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; }
   #field.flash { animation:fl .25s; }
   @keyframes fl { 50% { box-shadow:inset 0 0 0 6px #ef4444; } }
   .big { font-size:54px; font-weight:800; text-align:center; color:var(--acc); margin:8px 0; }
@@ -48,7 +47,7 @@
   <section id="play" style="display:none; flex-direction:column; gap:10px">
     <div class="top"><span id="lvname"></span><span id="time">0.0초</span><span id="pen"></span></div>
     <div class="targets" id="targets"></div>
-    <div id="field"></div>
+    <div id="field"><canvas id="base"></canvas><canvas id="mark"></canvas></div>
   </section>
 
   <section id="end" class="card hide">
@@ -69,7 +68,20 @@ const LEVELS = {
 };
 
 const $ = id => document.getElementById(id);
-let level = "easy", found = 0, total = 0, start = 0, tick = null, penalty = 0, over = false;
+let level = "easy", found = 0, total = 0, start = 0, tick = null, penalty = 0, over = false, mctx = null, targetsPos = [];
+
+// 이모지를 한 번만 그려 둔 그림(스프라이트)을 만들어 두고 복사해서 쓰면 수백 개를 그려도 가볍다
+const sprites = {};
+function sprite(e) {
+  if (!sprites[e]) {
+    const c = document.createElement("canvas"); c.width = c.height = 96;
+    const x = c.getContext("2d");
+    x.font = "78px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+    x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(e, 48, 52);
+    sprites[e] = c;
+  }
+  return sprites[e];
+}
 
 const shuffle = a => { for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
 
@@ -103,8 +115,13 @@ function begin(lv) {
   show("play");
 
   const field = $("field");
-  field.innerHTML = "";
   const W = field.clientWidth, H = field.clientHeight;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const base = $("base"), mark = $("mark");
+  base.width = mark.width = W * dpr; base.height = mark.height = H * dpr;
+  const bx = base.getContext("2d"); bx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  mctx = mark.getContext("2d"); mctx.setTransform(dpr, 0, 0, dpr, 0, 0); mctx.clearRect(0, 0, W, H);
+  targetsPos = [];
   const decoys = Math.round(W * H / (L.size * L.size) * L.density);
   // 사과를 먼저 깔고 체리를 마지막에 얹는다 (체리는 겹쳐도 완전히 가려지지 않음)
   const items = [];
@@ -120,17 +137,21 @@ function begin(lv) {
   const cells = shuffle([...Array(cols * rows).keys()]);
   items.forEach((it, i) => {
     const c = cells[i];
-    const x = (c % cols + 0.2 + Math.random() * 0.6) * cw;
-    const y = (Math.floor(c / cols) + 0.2 + Math.random() * 0.6) * ch;
-    const s = document.createElement("span");
-    s.textContent = it.e;
-    s.style.left = x + "px"; s.style.top = y + "px";
-    s.style.fontSize = (L.size * (0.85 + Math.random() * 0.3)) + "px";
-    s.style.transform = `translate(-50%,-50%) rotate(${Math.round(Math.random()*60-30)}deg)`;
-    if (it.t) s.dataset.t = it.e;
-    s.style.zIndex = it.t ? 2 : 1;
-    field.appendChild(s);
+    it.x = (c % cols + 0.2 + Math.random() * 0.6) * cw;
+    it.y = (Math.floor(c / cols) + 0.2 + Math.random() * 0.6) * ch;
+    it.s = L.size * (0.85 + Math.random() * 0.3);
+    it.rot = (Math.random() * 60 - 30) * Math.PI / 180;
   });
+  bx.clearRect(0, 0, W, H);
+  for (const pass of [false, true]) {                 // 사과 먼저, 체리는 맨 위에
+    for (const it of items) {
+      if (it.t !== pass) continue;
+      bx.save(); bx.translate(it.x, it.y); bx.rotate(it.rot);
+      bx.drawImage(sprite(it.e), -it.s / 2, -it.s / 2, it.s, it.s);
+      bx.restore();
+      if (it.t) targetsPos.push({ x: it.x, y: it.y, r: it.s * 0.65 + 4, done: false });
+    }
+  }
 
   start = Date.now();
   clearInterval(tick);
@@ -141,12 +162,19 @@ const elapsed = () => (Date.now() - start) / 1000 + penalty;
 
 $("field").addEventListener("click", e => {
   if (over) return;
-  const el = e.target.closest("span");
-  if (el && el.dataset.t && !el.classList.contains("found")) {
-    el.classList.add("found");
+  const rc = $("field").getBoundingClientRect(), x = e.clientX - rc.left, y = e.clientY - rc.top;
+  let hit = null, bd = 1e9;
+  for (const t of targetsPos) {
+    const d = Math.hypot(t.x - x, t.y - y);
+    if (!t.done && d <= t.r && d < bd) { hit = t; bd = d; }
+  }
+  if (hit) {
+    hit.done = true;
+    mctx.fillStyle = "rgba(34,197,94,.3)"; mctx.strokeStyle = "#22c55e"; mctx.lineWidth = 3;
+    mctx.beginPath(); mctx.arc(hit.x, hit.y, hit.r * 0.85, 0, 7); mctx.fill(); mctx.stroke();
     $("left").textContent = total - ++found;
     if (found === total) finish();
-  } else if (!el || !el.dataset.t) {
+  } else if (!targetsPos.some(t => t.done && Math.hypot(t.x - x, t.y - y) <= t.r)) {   // 이미 찾은 체리를 또 눌러도 벌칙 없음
     penalty += 3;
     $("pen").textContent = "+" + penalty + "초";
     const f = $("field"); f.classList.remove("flash"); void f.offsetWidth; f.classList.add("flash");
