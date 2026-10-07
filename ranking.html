@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>총 랭킹</title>
+<style>
+  :root { --bg:#232527; --panel:#393b3d; --line:#0d0d0e; --fg:#fff; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; min-height:100%; color:var(--fg); background:var(--bg);
+    font-family:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",-apple-system,sans-serif; }
+  #app { max-width:640px; margin:0 auto; padding:16px 14px 40px; display:flex; flex-direction:column; gap:14px; }
+  a.back { color:#fff; opacity:.6; text-decoration:none; font-size:14px; }
+  h1 { margin:0; text-align:center; font-size:30px; font-weight:900; text-shadow:3px 3px 0 var(--line); }
+  .sub { margin:0; text-align:center; font-size:13px; opacity:.7; line-height:1.6; }
+  .panel { background:var(--panel); border:3px solid var(--line); border-radius:12px; padding:12px; box-shadow:0 5px 0 var(--line); }
+  ol { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+  li { background:#2a2c2e; border:2px solid var(--line); border-radius:10px; padding:10px 12px; }
+  .top { display:flex; align-items:center; gap:10px; }
+  .n { width:32px; text-align:center; font-weight:900; font-size:18px; }
+  .nm { flex:1; font-weight:800; font-size:17px; word-break:break-all; }
+  .pt { font-weight:900; font-size:18px; color:#fde047; }
+  .det { margin:6px 0 0 42px; font-size:12px; opacity:.7; line-height:1.6; }
+  .msg { text-align:center; opacity:.7; padding:20px; }
+  details { font-size:13px; opacity:.85; line-height:1.7; }
+</style>
+</head>
+<body>
+<div id="app">
+  <a class="back" href="index.html">← 게임랜드</a>
+  <h1>👑 총 랭킹</h1>
+  <p class="sub">게임마다 1등 10점, 2등 9점 … 10등 1점을 받아 모두 더한 점수예요.</p>
+  <div class="panel"><ol id="list"><li class="msg">불러오는 중...</li></ol></div>
+  <details class="panel"><summary>점수 계산 방법</summary>
+    각 게임 랭킹의 1~10등에게 10점부터 1점까지 줍니다.<br>
+    점수 계산 대상: IQ 테스트, 체리 찾아라(쉬움·보통·어려움 각각), 경마 레이싱, 블록 탑쌓기, 공 맞추기, 고양이 밥주기<br>
+    같은 점수면 1등을 더 많이 한 사람이 위에 옵니다.
+  </details>
+</div>
+
+<script type="module">
+import { firebaseConfig } from "./firebase-config.js";
+const BOARDS = [
+  { key:"iq",            label:"IQ",       dir:"desc" },
+  { key:"cherry_easy",   label:"체리(쉬움)", dir:"asc" },
+  { key:"cherry_normal", label:"체리(보통)", dir:"asc" },
+  { key:"cherry_hard",   label:"체리(어려움)", dir:"asc" },
+  { key:"race",          label:"경마",     dir:"desc" },
+  { key:"tower",         label:"탑쌓기",   dir:"desc" },
+  { key:"ball",          label:"공",       dir:"desc" },
+  { key:"cat",           label:"고양이",   dir:"desc" },
+];
+const TOP = 10;                               // 등수 점수: 1등 10점 … 10등 1점
+const list = document.getElementById("list");
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+try {
+  const B = "https://www.gstatic.com/firebasejs/10.12.2/";
+  const [{ initializeApp }, F] = await Promise.all([import(B + "firebase-app.js"), import(B + "firebase-firestore.js")]);
+  const { getFirestore, collection, query, orderBy, limit, getDocs } = F;
+  const db = getFirestore(initializeApp(firebaseConfig));
+
+  const total = {};                           // uid → { nick, pt, firsts, parts[] }
+  await Promise.all(BOARDS.map(async b => {
+    try {
+      const snap = await getDocs(query(collection(db, "rank_" + b.key), orderBy("value", b.dir), limit(TOP)));
+      let i = 0;
+      snap.forEach(d => {
+        const v = d.data(), pt = TOP - i, u = total[v.uid] || (total[v.uid] = { nick: v.nick, pt: 0, firsts: 0, parts: [] });
+        u.pt += pt; if (i === 0) u.firsts++;
+        u.parts.push(`${b.label} ${i + 1}등(+${pt})`);
+        i++;
+      });
+    } catch (e) { /* 아직 기록 없는 게임은 건너뜀 */ }
+  }));
+
+  const rows = Object.values(total).sort((a, b) => b.pt - a.pt || b.firsts - a.firsts);
+  list.textContent = "";
+  if (!rows.length) list.appendChild(el("li", "msg", "아직 기록이 없어요. 게임을 하고 랭킹에 도전해 보세요!"));
+  rows.slice(0, 50).forEach((r, i) => {
+    const li = el("li"), top = el("div", "top");
+    top.append(el("span", "n", i < 3 ? ["🥇","🥈","🥉"][i] : String(i + 1)), el("span", "nm", r.nick), el("span", "pt", r.pt + "점"));
+    li.append(top, el("div", "det", r.parts.join(" · ")));
+    list.appendChild(li);
+  });
+} catch (e) {
+  list.textContent = "";
+  list.appendChild(el("li", "msg", "랭킹을 불러오지 못했어요."));
+}
+</script>
+</body>
+</html>
