@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>딸기 찾아라</title>
+<title>체리 찾아라</title>
 <style>
   :root { --bg:#12121a; --card:#1e1e2b; --fg:#fff; --acc:#f59e0b; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -37,10 +37,10 @@
 <body>
 <div id="app">
   <a class="back" href="index.html">← 게임 모음</a>
-  <h1>🍓 딸기 찾아라</h1>
+  <h1>🍒 체리 찾아라</h1>
 
   <section id="menu" class="card">
-    <p>화면 가득 빽빽한 🍎 사과 속에 숨어 있는 🍓 <b>딸기 10개</b>를 모두 찾아 터치하세요. 사과를 누르면 <b>+3초</b> 벌칙이 붙어요.</p>
+    <p>화면 가득 빽빽한 🍎 사과 속에 숨어 있는 🍒 <b>체리 10개</b>를 모두 찾아 터치하세요. 사과를 누르면 <b>+3초</b> 벌칙이 붙어요.</p>
     <div class="lv" id="lv"></div>
     <p class="muted" style="margin-top:14px">내 단계별 최고 기록은 이 기기에만 저장됩니다. 개인정보는 수집하지 않습니다.</p>
   </section>
@@ -60,7 +60,7 @@
 </div>
 
 <script>
-const TARGET = "🍓", DECOY = "🍎", COUNT = 10;   // 사과 속에서 딸기 10개 찾기
+const TARGET = "🍒", DECOY = "🍎", COUNT = 10;   // 사과 속에서 체리 10개 찾기
 // density: 화면을 사과가 덮는 정도 (클수록 겹쳐서 배경이 안 보임)
 const LEVELS = {
   easy:   { name:"쉬움",   size:34, density:2.0, desc:"큼직한 사과가 빽빽함" },
@@ -106,13 +106,13 @@ function begin(lv) {
   field.innerHTML = "";
   const W = field.clientWidth, H = field.clientHeight;
   const decoys = Math.round(W * H / (L.size * L.size) * L.density);
-  // 사과를 먼저 깔고 딸기를 마지막에 얹는다 (딸기는 겹쳐도 완전히 가려지지 않음)
+  // 사과를 먼저 깔고 체리를 마지막에 얹는다 (체리는 겹쳐도 완전히 가려지지 않음)
   const items = [];
   for (let i = 0; i < decoys; i++) items.push({ e:DECOY, t:false });
   shuffle(items);
   for (let i = 0; i < COUNT; i++) items.splice(Math.floor(Math.random() * items.length * 0.4) + Math.floor(items.length * 0.6), 0, { e:TARGET, t:true });
 
-  $("targets").innerHTML = `<span class="t">${TARGET}</span><span>사과 속 <b>딸기</b> <b id="left">${COUNT}</b>개를 찾아라!</span>`;
+  $("targets").innerHTML = `<span class="t">${TARGET}</span><span>사과 속 <b>체리</b> <b id="left">${COUNT}</b>개를 찾아라!</span>`;
 
   const n = items.length;
   const cols = Math.ceil(Math.sqrt(n * W / H)), rows = Math.ceil(n / cols);

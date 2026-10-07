@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>고양이 밥주기</title>
+<style>
+  :root { --bg:#12121a; --card:#1e1e2b; --fg:#fff; --acc:#fb923c; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); overflow:hidden; overscroll-behavior:none;
+    font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif; }
+  #app { height:100dvh; max-width:480px; margin:0 auto; padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+  a.back { color:#fff; opacity:.6; text-decoration:none; font-size:14px; }
+  .top { display:flex; justify-content:space-between; font-weight:700; font-size:16px; }
+  #wrap { position:relative; flex:1; min-height:0; display:flex; flex-direction:column; gap:10px; }
+  #room { flex:1; min-height:0; background:linear-gradient(#fde68a,#fcd9a0 60%,#b45309 60%); border-radius:16px; display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:10px 6px; align-items:end; }
+  .slot { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer; position:relative; }
+  .bubble { background:#fff; color:#222; border-radius:16px; padding:4px 12px; font-size:34px; line-height:1.3; position:relative; box-shadow:0 2px 6px rgba(0,0,0,.2); }
+  .bubble::after { content:""; position:absolute; bottom:-8px; left:50%; margin-left:-8px; border:8px solid transparent; border-top-color:#fff; border-bottom:0; }
+  .cat { font-size:68px; line-height:1; transition:transform .15s; }
+  .cat.pop { transform:scale(1.25); }
+  .bar { width:80%; height:8px; background:rgba(0,0,0,.2); border-radius:4px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:#22c55e; width:100%; }
+  .empty { opacity:0; }
+  .foods { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .food { border:3px solid transparent; background:var(--card); border-radius:16px; font-size:40px; padding:10px 0; cursor:pointer; }
+  .food small { display:block; font-size:12px; opacity:.7; margin-top:2px; }
+  .food.sel { border-color:var(--acc); background:#3a2a1a; transform:translateY(-3px); }
+  #ov { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+    background:rgba(0,0,0,.65); border-radius:16px; text-align:center; padding:20px; z-index:5; }
+  #ov h1 { margin:0; font-size:28px; }
+  #ov p { margin:0; line-height:1.6; opacity:.9; font-size:15px; }
+  #ov .big { font-size:48px; font-weight:800; color:#fde047; }
+  .btn { border:0; border-radius:14px; padding:14px 30px; font-size:18px; font-weight:700; background:var(--acc); color:#12121a; cursor:pointer; margin-top:6px; }
+  .hide { display:none !important; }
+  .float { position:absolute; font-weight:800; font-size:22px; pointer-events:none; animation:up .8s forwards; }
+  @keyframes up { to { transform:translateY(-50px); opacity:0; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <a class="back" href="index.html">← 게임 모음</a>
+  <div class="top"><span id="score">0점</span><span id="lives">❤️❤️❤️</span><span id="best"></span></div>
+  <div id="wrap">
+    <div id="room"></div>
+    <div class="foods" id="foods"></div>
+    <div id="ov">
+      <h1 id="ovt">🐱 고양이 밥주기</h1>
+      <div class="big hide" id="ovs"></div>
+      <p id="ovp">배고픈 고양이들이 원하는 밥을 말풍선으로 알려줘요.<br><b>아래에서 밥을 고르고 → 고양이를 터치</b>해서 주세요!<br>틀린 밥을 주거나 너무 오래 기다리게 하면 ❤️가 깎여요.<br>빨리 줄수록 점수가 높아요.</p>
+      <button class="btn" id="go">시작</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const FOODS = [["🐟","생선"],["🍖","고기"],["🥛","우유"],["🍤","새우"]];
+const CATS = ["🐱","🐈","🐈‍⬛","😺"];
+let state = "ready", slots = [], sel = 0, score = 0, lives = 3, elapsed = 0, spawnT = 0, timer = null, lastT = 0;
+
+function getBest() { try { return parseInt(localStorage.getItem("cat_best")) || 0; } catch (e) { return 0; } }
+function setBest(v) { try { localStorage.setItem("cat_best", v); } catch (e) {} }
+
+// UI 구성
+const room = $("room"), foodsEl = $("foods");
+FOODS.forEach((f, i) => {
+  const b = document.createElement("button");
+  b.className = "food"; b.innerHTML = f[0] + "<small>" + f[1] + "</small>";
+  b.onclick = () => { sel = i; renderSel(); };
+  foodsEl.appendChild(b);
+});
+for (let i = 0; i < 3; i++) {
+  const s = document.createElement("div");
+  s.className = "slot";
+  s.innerHTML = '<div class="bubble"></div><div class="cat"></div><div class="bar"><i></i></div>';
+  s.onclick = () => feed(i);
+  room.appendChild(s);
+}
+const slotEls = [...room.children];
+function renderSel() { [...foodsEl.children].forEach((b, i) => b.classList.toggle("sel", i === sel)); }
+
+function hud() {
+  $("score").textContent = score + "점";
+  $("lives").textContent = "❤️".repeat(Math.max(0, lives)) + "🖤".repeat(3 - Math.max(0, lives));
+}
+
+function floatText(i, text, color) {
+  const f = document.createElement("div");
+  f.className = "float"; f.textContent = text; f.style.color = color;
+  f.style.left = "50%"; f.style.top = "20%"; f.style.transform = "translateX(-50%)";
+  slotEls[i].appendChild(f); setTimeout(() => f.remove(), 800);
+}
+
+function clearSlot(i, face, ms) {
+  const el = slotEls[i];
+  slots[i] = null;
+  el.querySelector(".cat").textContent = face;
+  el.querySelector(".bubble").style.visibility = "hidden";
+  el.querySelector(".bar").style.visibility = "hidden";
+  setTimeout(() => { if (!slots[i]) { el.querySelector(".cat").textContent = ""; } }, ms);
+}
+
+function spawnCat() {
+  const free = [0, 1, 2].filter(i => !slots[i]);
+  if (!free.length) return;
+  const i = free[Math.floor(Math.random() * free.length)];
+  const want = Math.floor(Math.random() * FOODS.length);
+  const wait = Math.max(3.2, 8 - elapsed * 0.08);              // 기다려 주는 시간
+  slots[i] = { want, wait, left: wait };
+  const el = slotEls[i];
+  el.querySelector(".cat").textContent = CATS[Math.floor(Math.random() * CATS.length)];
+  const bb = el.querySelector(".bubble"); bb.textContent = FOODS[want][0]; bb.style.visibility = "visible";
+  const bar = el.querySelector(".bar"); bar.style.visibility = "visible";
+  bar.firstChild.style.width = "100%"; bar.firstChild.style.background = "#22c55e";
+}
+
+function feed(i) {
+  if (state !== "play") return;
+  const c = slots[i]; if (!c) return;
+  const el = slotEls[i].querySelector(".cat");
+  el.classList.add("pop"); setTimeout(() => el.classList.remove("pop"), 150);
+  if (c.want === sel) {
+    const pts = 1 + Math.round((c.left / c.wait) * 4);       // 빨리 줄수록 최대 5점
+    score += pts; hud();
+    floatText(i, "+" + pts, "#16a34a");
+    clearSlot(i, "😻", 500);
+  } else {
+    floatText(i, "😾 아니야!", "#dc2626");
+    clearSlot(i, "😾", 500);
+    hurt();
+  }
+}
+
+function hurt() {
+  lives--; hud();
+  if (lives <= 0) end();
+}
+
+function end() {
+  state = "over"; clearInterval(timer);
+  const b = getBest(), nb = score > b;
+  if (nb) setBest(score);
+  $("ovt").textContent = nb ? "🎉 최고 기록!" : "고양이들이 떠났어요 😿";
+  $("ovs").textContent = score + "점";
+  $("ovs").classList.remove("hide");
+  $("ovp").textContent = nb ? "새로운 기록이에요!" : "내 최고 기록 " + b + "점";
+  $("go").textContent = "다시 하기";
+  $("ov").classList.remove("hide");
+  $("best").textContent = "최고 " + Math.max(b, score);
+}
+
+function tick() {
+  const now = performance.now(), dt = Math.min(0.2, (now - lastT) / 1000); lastT = now;
+  elapsed += dt; spawnT -= dt;
+  if (spawnT <= 0) { spawnCat(); spawnT = Math.max(0.6, 2.2 - elapsed * 0.03) * (0.7 + Math.random() * 0.6); }
+  for (let i = 0; i < 3; i++) {
+    const c = slots[i]; if (!c) continue;
+    c.left -= dt;
+    const r = Math.max(0, c.left / c.wait), bar = slotEls[i].querySelector(".bar i");
+    bar.style.width = (r * 100) + "%";
+    bar.style.background = r > 0.5 ? "#22c55e" : r > 0.25 ? "#eab308" : "#ef4444";
+    if (c.left <= 0) {
+      floatText(i, "😿 배고파…", "#dc2626");
+      clearSlot(i, "😿", 500);
+      hurt();
+      if (state !== "play") return;
+    }
+  }
+}
+
+function start() {
+  slots = [null, null, null]; score = 0; lives = 3; elapsed = 0; spawnT = 0.3; sel = 0; state = "play";
+  slotEls.forEach(el => { el.querySelector(".cat").textContent = ""; el.querySelector(".bubble").style.visibility = "hidden"; el.querySelector(".bar").style.visibility = "hidden"; });
+  renderSel(); hud();
+  $("ov").classList.add("hide");
+  lastT = performance.now();
+  clearInterval(timer); timer = setInterval(tick, 50);
+}
+
+$("go").onclick = start;
+$("best").textContent = getBest() ? "최고 " + getBest() : "";
+renderSel(); hud();
+</script>
+</body>
+</html>
