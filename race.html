@@ -61,7 +61,7 @@ function reset() {
   resize();
   player = { x: W / 2, y: H - 90, s: 44 };
   targetX = player.x;
-  enemies = []; dist = 0; speed = 260; lineOff = 0; spawnT = 0;
+  enemies = []; dist = 0; speed = 300; lineOff = 0; spawnT = 0;
 }
 
 function start() {
@@ -93,7 +93,7 @@ function loop(t) {
 }
 
 function update(dt) {
-  speed += 8 * dt;                       // 점점 빨라짐
+  speed += 25 * dt;                      // 점점 빨라짐 (값이 클수록 어려움)
   dist += speed * dt / 12;
   lineOff = (lineOff + speed * dt) % 60;
 
@@ -109,7 +109,7 @@ function update(dt) {
     const lane = Math.floor(Math.random() * lanes);
     enemies.push({ x: 20 + lw * (lane + 0.5) + (Math.random() - 0.5) * lw * 0.3, y: -50,
       e: ENEMIES[Math.floor(Math.random() * ENEMIES.length)], v: 0.45 + Math.random() * 0.3 });
-    spawnT = Math.max(0.35, 0.95 - speed / 1500) * (0.7 + Math.random() * 0.6);
+    spawnT = Math.max(0.2, 0.9 - speed / 900) * (0.7 + Math.random() * 0.6);
   }
   for (const e of enemies) e.y += speed * e.v * dt + speed * 0.5 * dt;
   enemies = enemies.filter(e => e.y < H + 60);
