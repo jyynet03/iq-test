@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>경마 레이싱</title>
 <style>
-  :root { --bg:#12121a; --card:#1e1e2b; --fg:#fff; --acc:#22c55e; }
+  :root { --bg:#12121a; --fg:#fff; --acc:#22c55e; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); overflow:hidden; overscroll-behavior:none;
     font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif; }
-  #app { height:100dvh; max-width:480px; margin:0 auto; padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+  #app { height:100dvh; max-width:560px; margin:0 auto; padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
   a.back { color:#fff; opacity:.6; text-decoration:none; font-size:14px; }
   .top { display:flex; justify-content:space-between; font-weight:700; font-size:16px; }
   #wrap { position:relative; flex:1; min-height:0; }
-  canvas { width:100%; height:100%; display:block; border-radius:16px; touch-action:none; background:#2b2b35; }
+  canvas { width:100%; height:100%; display:block; border-radius:16px; touch-action:none; background:#7dd3fc; }
   #ov { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
     background:rgba(0,0,0,.6); border-radius:16px; text-align:center; padding:20px; }
   #ov h1 { margin:0; font-size:28px; }
-  #ov p { margin:0; line-height:1.6; opacity:.85; font-size:15px; }
-  #ov .big { font-size:48px; font-weight:800; color:var(--acc); }
+  #ov p { margin:0; line-height:1.6; opacity:.9; font-size:15px; }
+  #ov .big { font-size:48px; font-weight:800; color:#fde047; }
   .btn { border:0; border-radius:14px; padding:14px 30px; font-size:18px; font-weight:700; background:var(--acc); color:#12121a; cursor:pointer; margin-top:6px; }
   .hide { display:none !important; }
 </style>
@@ -26,13 +26,13 @@
 <body>
 <div id="app">
   <a class="back" href="index.html">← 게임랜드</a>
-  <div class="top"><span id="score">0 m</span><span id="best"></span></div>
+  <div class="top"><span id="score">0 m</span><span id="spd"></span><span id="best"></span></div>
   <div id="wrap">
     <canvas id="c"></canvas>
     <div id="ov">
       <h1 id="ovt">🐎 경마 레이싱</h1>
       <div class="big hide" id="ovs"></div>
-      <p id="ovp">화면을 좌우로 터치하거나 드래그해서 말을 움직이세요.<br>(PC: ← → 키)<br>다른 동물들을 피하며 최대한 멀리 달리세요!</p>
+      <p id="ovp">앞으로 달려오는 장애물을 <b>← → 방향키</b>로 피하세요!<br>(폰: 화면을 좌우로 터치하거나 드래그)<br>갈수록 엄청 빨라져요.</p>
       <button class="btn" id="go">시작</button>
     </div>
   </div>
@@ -41,11 +41,16 @@
 <script>
 const cv = document.getElementById("c"), ctx = cv.getContext("2d");
 const $ = id => document.getElementById(id);
-let W = 0, H = 0, dpr = 1;
+const OBST = ["🚧","🪨","🌵","🐘","🦓","🪵","🐂"];
+const LANES = [-0.62, 0, 0.62];
+const FAR = 14;                       // 장애물이 생기는 먼 거리
+const PD = 0.3;                       // 플레이어 위치(거리). 작을수록 화면 아래
+let W = 0, H = 0, dpr = 1, HY = 0;
+let state = "ready", px, tx, obs, dist, v, phase, nextSpawn, keys = {}, last = 0, elapsed = 0, tilt = 0;
 
 function resize() {
   dpr = window.devicePixelRatio || 1;
-  W = cv.clientWidth; H = cv.clientHeight;
+  W = cv.clientWidth; H = cv.clientHeight; HY = H * 0.36;
   cv.width = W * dpr; cv.height = H * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
@@ -54,14 +59,14 @@ addEventListener("resize", resize);
 function getBest() { try { return parseInt(localStorage.getItem("race_best")) || 0; } catch (e) { return 0; } }
 function setBest(v) { try { localStorage.setItem("race_best", v); } catch (e) {} }
 
-const ENEMIES = ["🐎","🐎","🦓","🦄","🐂","🐘"];
-let state = "ready", player, enemies, dist, speed, lineOff, spawnT, targetX, keys = {}, last = 0;
+// 원근: 거리 d → 화면 배율 s (d=0이면 1, 멀수록 작아짐)
+const S = d => 1 / (1 + d * 0.4);
+const SY = s => HY + (H - HY) * s;
+const SX = (lat, s) => W / 2 + lat * W * 0.46 * s;
 
 function reset() {
   resize();
-  player = { x: W / 2, y: H - 90, s: 44 };
-  targetX = player.x;
-  enemies = []; dist = 0; speed = 300; lineOff = 0; spawnT = 0;
+  px = 0; tx = 0; obs = []; dist = 0; v = 4.5; phase = 0; nextSpawn = 4; elapsed = 0; tilt = 0;
 }
 
 function start() {
@@ -73,8 +78,7 @@ function start() {
 
 function over() {
   state = "over";
-  const m = Math.floor(dist);
-  const b = getBest(), nb = m > b;
+  const m = Math.floor(dist), b = getBest(), nb = m > b;
   if (nb) setBest(m);
   $("ovt").textContent = nb ? "🎉 최고 기록!" : "💥 충돌!";
   $("ovs").textContent = m + " m";
@@ -85,75 +89,120 @@ function over() {
   $("best").textContent = "최고 " + Math.max(b, m) + " m";
 }
 
-function loop(t) {
-  if (state !== "play") return;
-  const dt = Math.min(0.05, (t - last) / 1000); last = t;
-  update(dt); draw();
-  requestAnimationFrame(loop);
+function spawnWave() {
+  const n = elapsed > 8 && Math.random() < Math.min(0.75, 0.25 + elapsed * 0.02) ? 2 : 1;   // 가끔 2칸을 막음 (항상 한 칸은 비움)
+  const lanes = [0, 1, 2].sort(() => Math.random() - 0.5).slice(0, n);
+  for (const l of lanes)
+    obs.push({ lat: LANES[l] + (Math.random() - 0.5) * 0.1, d: FAR, e: OBST[Math.floor(Math.random() * OBST.length)] });
 }
 
 function update(dt) {
-  speed += 25 * dt;                      // 점점 빨라짐 (값이 클수록 어려움)
-  dist += speed * dt / 12;
-  lineOff = (lineOff + speed * dt) % 60;
+  elapsed += dt;
+  v = Math.min(15, 4.5 + elapsed * 0.45);                 // 빠르게 가속
+  phase += v * dt; dist += v * dt * 1.2;
 
-  if (keys.ArrowLeft) targetX -= 420 * dt;
-  if (keys.ArrowRight) targetX += 420 * dt;
-  const m = 40;
-  targetX = Math.max(m, Math.min(W - m, targetX));
-  player.x += (targetX - player.x) * Math.min(1, 14 * dt);
+  const sp = 1.7 + v * 0.07;                              // 좌우 이동 속도 (빨라질수록 더 민첩)
+  if (keys.ArrowLeft) tx -= sp * dt;
+  if (keys.ArrowRight) tx += sp * dt;
+  tx = Math.max(-0.88, Math.min(0.88, tx));
+  const prev = px;
+  px += (tx - px) * Math.min(1, 16 * dt);
+  tilt += (((px - prev) / Math.max(dt, 0.001)) * 0.12 - tilt) * Math.min(1, 10 * dt);
 
-  spawnT -= dt;
-  if (spawnT <= 0) {
-    const lanes = 4, lw = (W - 40) / lanes;
-    const lane = Math.floor(Math.random() * lanes);
-    enemies.push({ x: 20 + lw * (lane + 0.5) + (Math.random() - 0.5) * lw * 0.3, y: -50,
-      e: ENEMIES[Math.floor(Math.random() * ENEMIES.length)], v: 0.45 + Math.random() * 0.3 });
-    spawnT = Math.max(0.2, 0.9 - speed / 900) * (0.7 + Math.random() * 0.6);
+  nextSpawn -= v * dt;
+  if (nextSpawn <= 0) { spawnWave(); nextSpawn = Math.max(3.2, 7 - elapsed * 0.08) * (0.8 + Math.random() * 0.5); }
+
+  for (const o of obs) {
+    const pd = o.d; o.d -= v * dt;
+    // 지나가는 순간(스윕) 충돌 검사
+    if (o.d <= PD + 0.35 && pd >= PD - 0.15 && Math.abs(o.lat - px) < 0.3) return over();
   }
-  for (const e of enemies) e.y += speed * e.v * dt + speed * 0.5 * dt;
-  enemies = enemies.filter(e => e.y < H + 60);
-
-  // 충돌 (조금 작은 판정)
-  for (const e of enemies) {
-    if (Math.abs(e.x - player.x) < 30 && Math.abs(e.y - player.y) < 38) return over();
-  }
+  obs = obs.filter(o => o.d > -1.2);
   $("score").textContent = Math.floor(dist) + " m";
+  $("spd").textContent = Math.round(v * 14) + " km/h";
+}
+
+function poly(pts, color) {
+  ctx.fillStyle = color; ctx.beginPath();
+  ctx.moveTo(pts[0], pts[1]);
+  for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
+  ctx.closePath(); ctx.fill();
 }
 
 function draw() {
-  ctx.fillStyle = "#2b2b35"; ctx.fillRect(0, 0, W, H);
-  // 도로 가장자리
-  ctx.fillStyle = "#fff"; ctx.fillRect(8, 0, 4, H); ctx.fillRect(W - 12, 0, 4, H);
-  // 차선
-  ctx.fillStyle = "#e5e5e5";
-  const lanes = 4, lw = (W - 40) / lanes;
-  for (let i = 1; i < lanes; i++) {
-    const x = 20 + lw * i - 2;
-    for (let y = -60 + lineOff; y < H; y += 60) ctx.fillRect(x, y, 4, 30);
+  // 하늘
+  const g = ctx.createLinearGradient(0, 0, 0, HY); g.addColorStop(0, "#38bdf8"); g.addColorStop(1, "#bae6fd");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, HY + 2);
+  ctx.fillStyle = "#fde047"; ctx.beginPath(); ctx.arc(W * 0.8, HY * 0.35, 26, 0, 7); ctx.fill();
+  // 먼 산
+  ctx.fillStyle = "#64748b";
+  ctx.beginPath(); ctx.moveTo(0, HY); ctx.lineTo(W * 0.18, HY - 46); ctx.lineTo(W * 0.38, HY); ctx.lineTo(W * 0.55, HY - 62); ctx.lineTo(W * 0.78, HY); ctx.lineTo(W * 0.9, HY - 38); ctx.lineTo(W, HY); ctx.fill();
+
+  // 도로와 풀밭 (거리 띠를 번갈아 칠함)
+  const f = phase - Math.floor(phase), base = Math.floor(phase);
+  for (let j = 24; j >= 0; j--) {
+    const d1 = j - f, d2 = j + 1 - f;                       // j띠: 가까운쪽 d1, 먼쪽 d2
+    const s1 = S(d1), s2 = S(d2), y1 = SY(s1), y2 = SY(s2), odd = (base + j) % 2;
+    ctx.fillStyle = odd ? "#4ade80" : "#22c55e"; ctx.fillRect(0, y2, W, y1 - y2 + 1);
+    const lx1 = SX(-1, s1), rx1 = SX(1, s1), lx2 = SX(-1, s2), rx2 = SX(1, s2);
+    poly([lx1, y1, rx1, y1, rx2, y2, lx2, y2], odd ? "#9a7b4f" : "#8a6d43");              // 흙길
+    const cl1 = SX(-1.07, s1), cl2 = SX(-1.07, s2), cr1 = SX(1.07, s1), cr2 = SX(1.07, s2); // 가장자리 울타리선
+    poly([cl1, y1, lx1, y1, lx2, y2, cl2, y2], odd ? "#fff" : "#ef4444");
+    poly([rx1, y1, cr1, y1, cr2, y2, rx2, y2], odd ? "#fff" : "#ef4444");
+    if (odd) {                                                // 차선 점선
+      for (const L of [-0.31, 0.31]) {
+        const a1 = SX(L - 0.012, s1), b1 = SX(L + 0.012, s1), a2 = SX(L - 0.012, s2), b2 = SX(L + 0.012, s2);
+        poly([a1, y1, b1, y1, b2, y2, a2, y2], "rgba(255,255,255,.7)");
+      }
+    }
   }
+
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.font = "40px serif";
-  for (const e of enemies) {
-    ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(-Math.PI / 2); ctx.fillText(e.e, 0, 0); ctx.restore();
-  }
-  ctx.font = "46px serif";
-  ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(Math.PI / 2); ctx.fillText("🐎", 0, 0); ctx.restore();
+  // 장애물 (먼 것부터)
+  obs.slice().sort((a, b) => b.d - a.d).forEach(o => {
+    const s = S(Math.max(o.d, -0.9)), x = SX(o.lat, s), y = SY(s);
+    const size = 120 * s;
+    ctx.fillStyle = "rgba(0,0,0,.28)"; ctx.beginPath(); ctx.ellipse(x, y, size * 0.45, size * 0.12, 0, 0, 7); ctx.fill();
+    ctx.font = size + "px serif"; ctx.fillText(o.e, x, y - size * 0.42);
+  });
+
+  // 플레이어 말
+  const ps = S(PD), pxs = SX(px, ps), pys = SY(ps), psz = 130 * ps;
+  ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.beginPath(); ctx.ellipse(pxs, pys, psz * 0.5, psz * 0.13, 0, 0, 7); ctx.fill();
+  const bob = Math.sin(phase * 5) * 4 * ps;
+  ctx.save(); ctx.translate(pxs, pys - psz * 0.42 + bob); ctx.rotate(tilt);
+  ctx.font = psz + "px serif"; ctx.fillText("🏇", 0, 0); ctx.restore();
+
+  // 속도감 (가장자리 어둡게)
+  const vg = ctx.createRadialGradient(W / 2, H * 0.6, H * 0.3, W / 2, H * 0.6, H * 0.85);
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0," + Math.min(0.5, (v - 4) * 0.04) + ")");
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
 }
 
-// 입력: 터치/드래그/마우스
-function pointerX(e) {
-  const r = cv.getBoundingClientRect();
-  targetX = e.clientX - r.left;
+function loop(t) {
+  if (state !== "play") return;
+  const dt = Math.min(0.05, (t - last) / 1000); last = t;
+  update(dt);
+  if (state === "play") draw();
+  requestAnimationFrame(loop);
 }
-cv.addEventListener("pointerdown", e => { cv.setPointerCapture(e.pointerId); pointerX(e); });
-cv.addEventListener("pointermove", e => { if (e.buttons || e.pointerType === "touch") pointerX(e); });
-addEventListener("keydown", e => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { keys[e.key] = true; e.preventDefault(); } });
+
+// 입력: 방향키 + 터치/드래그
+function pointerLat(e) {
+  const r = cv.getBoundingClientRect();
+  tx = ((e.clientX - r.left) / r.width * 2 - 1) * 1.05;
+}
+cv.addEventListener("pointerdown", e => { cv.setPointerCapture(e.pointerId); pointerLat(e); });
+cv.addEventListener("pointermove", e => { if (e.buttons || e.pointerType === "touch") pointerLat(e); });
+addEventListener("keydown", e => {
+  if (e.key === "ArrowLeft" || e.key === "ArrowRight") { keys[e.key] = true; e.preventDefault(); }
+  else if ((e.key === "Enter" || e.key === " ") && state !== "play") start();
+});
 addEventListener("keyup", e => { keys[e.key] = false; });
 
 $("go").onclick = start;
 $("best").textContent = getBest() ? "최고 " + getBest() + " m" : "";
-resize();
+resize(); reset(); draw();
 </script>
 </body>
 </html>

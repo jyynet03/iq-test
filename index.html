@@ -12,7 +12,7 @@
     background-image:radial-gradient(circle at center, rgba(255,255,255,.07) 0 5px, transparent 6px);
     background-size:34px 34px;
     font-family:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",-apple-system,sans-serif; font-weight:800; }
-  #app { min-height:100dvh; max-width:640px; margin:0 auto; padding:22px 14px 28px; display:flex; flex-direction:column; gap:16px; }
+  #app { min-height:100dvh; max-width:1200px; margin:0 auto; padding:22px 14px 28px; display:flex; flex-direction:column; gap:16px; }
 
   /* 상단 로고 바 */
   header { display:flex; align-items:center; justify-content:center; gap:10px; background:var(--panel); border:3px solid var(--line);
@@ -22,8 +22,13 @@
   h1 { margin:0; font-size:32px; font-weight:900; letter-spacing:1px; text-shadow:3px 3px 0 var(--line); }
   .sub { margin:0; text-align:center; opacity:.8; font-size:15px; font-weight:700; }
 
-  .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-  @media (max-width:360px) { .grid { grid-template-columns:1fr; } }
+  /* 넓은 화면 6열 → 중간 3열 → 폰 2열 */
+  .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+  @media (min-width:640px) { .grid { grid-template-columns:repeat(3,1fr); } }
+  @media (min-width:960px) { .grid { grid-template-columns:repeat(6,1fr); gap:12px; }
+    .info b { font-size:15px; } .info em { font-size:11px; } .play { font-size:14px; margin:4px 8px 8px; }
+    .thumb { font-size:50px; } header { max-width:520px; margin:0 auto; width:100%; } }
+  @media (max-width:340px) { .grid { grid-template-columns:1fr; } }
 
   /* 게임 카드 */
   .card { --c1:#7c5cff; --c2:#4f46e5; --edge:#2b2196;

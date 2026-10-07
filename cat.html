@@ -13,11 +13,11 @@
   a.back { color:#fff; opacity:.6; text-decoration:none; font-size:14px; }
   .top { display:flex; justify-content:space-between; font-weight:700; font-size:16px; }
   #wrap { position:relative; flex:1; min-height:0; display:flex; flex-direction:column; gap:10px; }
-  #room { flex:1; min-height:0; background:linear-gradient(#fde68a,#fcd9a0 60%,#b45309 60%); border-radius:16px; display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:10px 6px; align-items:end; }
+  #room { flex:1; min-height:0; background:linear-gradient(#fde68a,#fcd9a0 60%,#b45309 60%); border-radius:16px; display:grid; grid-template-columns:repeat(2,1fr); gap:10px; padding:10px 10px; align-items:end; }
   .slot { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:6px; cursor:pointer; position:relative; }
-  .bubble { background:#fff; color:#222; border-radius:16px; padding:4px 12px; font-size:34px; line-height:1.3; position:relative; box-shadow:0 2px 6px rgba(0,0,0,.2); }
+  .bubble { background:#fff; color:#222; border-radius:16px; padding:4px 16px; font-size:44px; line-height:1.3; position:relative; box-shadow:0 2px 6px rgba(0,0,0,.2); }
   .bubble::after { content:""; position:absolute; bottom:-8px; left:50%; margin-left:-8px; border:8px solid transparent; border-top-color:#fff; border-bottom:0; }
-  .cat { font-size:68px; line-height:1; transition:transform .15s; }
+  .cat { font-size:96px; line-height:1; transition:transform .15s; }
   .cat.pop { transform:scale(1.25); }
   .bar { width:80%; height:8px; background:rgba(0,0,0,.2); border-radius:4px; overflow:hidden; }
   .bar i { display:block; height:100%; background:#22c55e; width:100%; }
@@ -47,7 +47,7 @@
     <div id="ov">
       <h1 id="ovt">🐱 고양이 밥주기</h1>
       <div class="big hide" id="ovs"></div>
-      <p id="ovp">배고픈 고양이들이 원하는 밥을 말풍선으로 알려줘요.<br><b>아래에서 밥을 고르고 → 고양이를 터치</b>해서 주세요!<br>틀린 밥을 주거나 너무 오래 기다리게 하면 ❤️가 깎여요.<br>빨리 줄수록 점수가 높아요.</p>
+      <p id="ovp">배고픈 고양이 <b>두 마리</b>가 동시에 밥을 달라고 해요. 원하는 밥은 말풍선에 나와요.<br><b>아래에서 밥을 고르고 → 고양이를 터치</b>해서 주세요!<br>틀린 밥을 주거나 너무 오래 기다리게 하면 ❤️가 깎여요.<br>빨리 줄수록 점수가 높아요.</p>
       <button class="btn" id="go">시작</button>
     </div>
   </div>
@@ -70,7 +70,7 @@ FOODS.forEach((f, i) => {
   b.onclick = () => { sel = i; renderSel(); };
   foodsEl.appendChild(b);
 });
-for (let i = 0; i < 3; i++) {
+for (let i = 0; i < 2; i++) {
   const s = document.createElement("div");
   s.className = "slot";
   s.innerHTML = '<div class="bubble"></div><div class="cat"></div><div class="bar"><i></i></div>';
@@ -102,7 +102,7 @@ function clearSlot(i, face, ms) {
 }
 
 function spawnCat() {
-  const free = [0, 1, 2].filter(i => !slots[i]);
+  const free = [0, 1].filter(i => !slots[i]);
   if (!free.length) return;
   const i = free[Math.floor(Math.random() * free.length)];
   const want = Math.floor(Math.random() * FOODS.length);
@@ -153,8 +153,8 @@ function end() {
 function tick() {
   const now = performance.now(), dt = Math.min(0.2, (now - lastT) / 1000); lastT = now;
   elapsed += dt; spawnT -= dt;
-  if (spawnT <= 0) { spawnCat(); spawnT = Math.max(0.6, 2.2 - elapsed * 0.03) * (0.7 + Math.random() * 0.6); }
-  for (let i = 0; i < 3; i++) {
+  if (spawnT <= 0) { spawnCat(); spawnT = Math.max(0.25, 0.8 - elapsed * 0.012) * (0.7 + Math.random() * 0.6); }   // 빈 자리는 금방 새 고양이로 채워짐
+  for (let i = 0; i < 2; i++) {
     const c = slots[i]; if (!c) continue;
     c.left -= dt;
     const r = Math.max(0, c.left / c.wait), bar = slotEls[i].querySelector(".bar i");
@@ -170,11 +170,12 @@ function tick() {
 }
 
 function start() {
-  slots = [null, null, null]; score = 0; lives = 3; elapsed = 0; spawnT = 0.3; sel = 0; state = "play";
+  slots = [null, null]; score = 0; lives = 3; elapsed = 0; spawnT = 0.3; sel = 0; state = "play";
   slotEls.forEach(el => { el.querySelector(".cat").textContent = ""; el.querySelector(".bubble").style.visibility = "hidden"; el.querySelector(".bar").style.visibility = "hidden"; });
   renderSel(); hud();
   $("ov").classList.add("hide");
   lastT = performance.now();
+  spawnCat(); spawnCat();                                     // 시작하자마자 두 마리가 동시에 밥을 요구
   clearInterval(timer); timer = setInterval(tick, 50);
 }
 

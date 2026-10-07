@@ -42,6 +42,7 @@
 const cv = document.getElementById("c"), ctx = cv.getContext("2d");
 const $ = id => document.getElementById(id);
 const LH = 38;                       // 한 줄 높이
+const DX = 20, DY = -14;             // 입체감: 블록 깊이를 오른쪽 위로 비껴 그리는 크기
 let W = 0, H = 0, dpr = 1;
 let state = "ready", layers = [], cur, dir, fall = [], cam = 0, camT = 0, perfect = 0, msg = "", msgT = 0, last = 0;
 
@@ -130,23 +131,36 @@ function update(dt) {
   const sp = Math.min(560, 170 + n * 9);
   cur.x += dir * sp * dt;
   if (cur.x < 0) { cur.x = 0; dir = 1; }
-  if (cur.x + cur.w > W) { cur.x = W - cur.w; dir = -1; }
+  if (cur.x + cur.w > W - DX) { cur.x = W - DX - cur.w; dir = -1; }
+}
+
+// 입체 블록: 앞면 + 윗면 + 오른쪽 옆면 (사선 투영)
+function quad(a, b, c, d, color) {
+  ctx.fillStyle = color; ctx.beginPath();
+  ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.lineTo(d[0], d[1]);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,.35)"; ctx.lineWidth = 1.5; ctx.stroke();
+}
+
+function drawBox(x, w, topY, h, hh) {
+  const x2 = x + w;
+  quad([x, topY], [x2, topY], [x2, topY + h], [x, topY + h], `hsl(${hh} 70% 50%)`);                       // 앞면
+  quad([x, topY], [x2, topY], [x2 + DX, topY + DY], [x + DX, topY + DY], `hsl(${hh} 80% 70%)`);           // 윗면
+  quad([x2, topY], [x2 + DX, topY + DY], [x2 + DX, topY + DY + h], [x2, topY + h], `hsl(${hh} 70% 36%)`); // 옆면
+  ctx.fillStyle = "rgba(255,255,255,.22)"; ctx.fillRect(x + 3, topY + 3, Math.max(0, w - 6), 4);          // 앞면 광택
 }
 
 function drawLayer(L, y) {
-  const top = y - LH + 3, h = LH - 3;
-  ctx.fillStyle = `hsl(${hue(L.i)} 70% 50%)`;                       // 블록 본체
-  ctx.beginPath(); ctx.roundRect(L.x, top, L.w, h, 6); ctx.fill();
-  ctx.fillStyle = `hsl(${hue(L.i)} 80% 68%)`;                       // 윗면 하이라이트
-  ctx.beginPath(); ctx.roundRect(L.x + 3, top + 3, Math.max(0, L.w - 6), 8, 4); ctx.fill();
-  ctx.strokeStyle = "rgba(0,0,0,.25)"; ctx.lineWidth = 2;           // 테두리
-  ctx.beginPath(); ctx.roundRect(L.x, top, L.w, h, 6); ctx.stroke();
+  drawBox(L.x, L.w, y - LH + 3, LH - 3, hue(L.i));
 }
 
 function draw() {
   ctx.clearRect(0, 0, W, H);
-  // 땅
-  ctx.fillStyle = "#166534"; ctx.fillRect(0, baseY() + cam + 0, W, H);
+  // 땅 (입체 바닥판)
+  const gy = baseY() + cam;
+  quad([0, gy], [W - DX, gy], [W, gy + DY], [DX, gy + DY], "#4ade80");
+  ctx.fillStyle = "#166534"; ctx.fillRect(0, gy, W - DX, H);
+  ctx.fillStyle = "#14532d"; ctx.beginPath(); ctx.moveTo(W - DX, gy); ctx.lineTo(W, gy + DY); ctx.lineTo(W, H); ctx.lineTo(W - DX, H); ctx.fill();
   for (const L of layers) drawLayer(L, layerY(L.i));
   for (const f of fall) drawLayer(f, f.y);
   if (cur) drawLayer(cur, curY());
